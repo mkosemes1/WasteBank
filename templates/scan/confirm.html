@@ -1,0 +1,667 @@
+{% extends "dashboard/layout.html" %}
+{% block title %}Nouveau dépôt{% endblock %}
+{% block page_title %}📦 Nouveau dépôt{% endblock %}
+
+{% block head %}
+<style>
+/* ── Étapes ──────────────────────────────────────────────────────────────── */
+.steps { display:flex; align-items:center; margin-bottom:32px; }
+.step-dot {
+  width:34px; height:34px; border-radius:50%; border:2px solid var(--border);
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:800; color:var(--muted); flex-shrink:0;
+  font-family:'Space Mono',monospace; transition:all .3s;
+}
+.step-dot.active { border-color:var(--green); color:var(--green); background:rgba(29,158,117,.12); }
+.step-dot.done   { border-color:var(--green); background:var(--green); color:#000; }
+.step-line { flex:1; height:2px; background:var(--border); transition:background .3s; }
+.step-line.done  { background:var(--green); }
+.step-labels { display:flex; margin-top:-20px; margin-bottom:28px; }
+.step-label {
+  flex:1; text-align:center; font-size:10px; color:var(--muted);
+  font-family:'Space Mono',monospace; letter-spacing:1px;
+}
+.step-label.active { color:var(--green); }
+
+/* ── Zone scan ───────────────────────────────────────────────────────────── */
+.scan-zone {
+  border:2px dashed var(--border); border-radius:16px;
+  overflow:hidden; position:relative; background:#0A0A08;
+  transition:border-color .3s;
+}
+.scan-zone.active  { border-color:var(--green); border-style:solid; }
+.scan-zone.success { border-color:var(--green); border-style:solid; background:rgba(29,158,117,.04); }
+.scan-zone.error   { border-color:var(--coral); border-style:solid; }
+
+#videoEl {
+  width:100%; display:block; max-height:280px; object-fit:cover; background:#000;
+}
+
+.scan-overlay {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  pointer-events:none;
+}
+.scan-frame {
+  width:200px; height:200px; border-radius:14px;
+  border:2px solid var(--green);
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.5);
+  position:relative;
+}
+.scan-frame::before, .scan-frame::after,
+.scan-frame > span::before, .scan-frame > span::after {
+  content:''; position:absolute; width:22px; height:22px; border-color:var(--green-light); border-style:solid;
+}
+.scan-frame::before  { top:-2px;  left:-2px;  border-width:3px 0 0 3px; border-radius:4px 0 0 0; }
+.scan-frame::after   { top:-2px;  right:-2px; border-width:3px 3px 0 0; border-radius:0 4px 0 0; }
+.scan-frame > span::before { bottom:-2px; left:-2px;  border-width:0 0 3px 3px; border-radius:0 0 0 4px; }
+.scan-frame > span::after  { bottom:-2px; right:-2px; border-width:0 3px 3px 0; border-radius:0 0 4px 0; }
+
+@keyframes scanbeam {
+  0%   { top:8px;  opacity:1; }
+  90%  { opacity:1; }
+  100% { top:calc(100% - 8px); opacity:0; }
+}
+.scan-beam {
+  position:absolute; left:4px; right:4px; height:2px;
+  background:linear-gradient(90deg,transparent,var(--green),transparent);
+  animation:scanbeam 2s ease-in-out infinite;
+}
+
+/* ── Tabs caméra / upload ────────────────────────────────────────────────── */
+.input-tabs { display:flex; border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-bottom:12px; }
+.input-tab  {
+  flex:1; padding:10px; text-align:center; cursor:pointer; font-weight:700;
+  font-size:13px; color:var(--muted); background:var(--bg2); transition:all .2s;
+  border:none; font-family:'Syne',sans-serif;
+}
+.input-tab.active { background:var(--green); color:#000; }
+
+/* ── Résultat identifié ──────────────────────────────────────────────────── */
+.identified-card {
+  display:flex; align-items:center; gap:16px;
+  padding:18px 20px; border-radius:14px;
+  border:2px solid var(--green); background:rgba(29,158,117,.07);
+  animation:popIn .35s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes popIn {
+  from { transform:scale(.92); opacity:0; }
+  to   { transform:scale(1);   opacity:1; }
+}
+
+.id-icon   { font-size:46px; flex-shrink:0; }
+.id-name   { font-size:18px; font-weight:800; margin-bottom:3px; }
+.id-price  { font-size:24px; font-weight:800; }
+.id-method { font-size:10px; color:var(--muted); font-family:'Space Mono',monospace;
+             margin-top:6px; letter-spacing:1px; }
+
+.conf-bar  { height:5px; background:var(--surface2); border-radius:3px; overflow:hidden; margin-top:6px; }
+.conf-fill { height:100%; border-radius:3px; transition:width .6s ease; }
+
+/* ── Calcul live ─────────────────────────────────────────────────────────── */
+.calc-card {
+  background:linear-gradient(135deg,#073D2C,#050F0A);
+  border:1px solid #0D4A35; border-radius:14px; padding:22px; text-align:center;
+}
+
+/* ── Boutons poids rapide ────────────────────────────────────────────────── */
+.weight-presets { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+.weight-btn {
+  padding:5px 12px; border-radius:6px; border:1px solid var(--border);
+  background:var(--surface); color:var(--muted); font-size:12px; font-weight:700;
+  cursor:pointer; font-family:'Syne',sans-serif; transition:all .2s;
+}
+.weight-btn:hover { border-color:var(--green); color:var(--green); }
+
+/* ── État en attente ─────────────────────────────────────────────────────── */
+.waiting-state {
+  padding:32px; text-align:center; color:var(--muted);
+}
+.waiting-state .big { font-size:42px; margin-bottom:10px; }
+
+/* ── Analyse spinner ─────────────────────────────────────────────────────── */
+@keyframes spin { to { transform:rotate(360deg); } }
+.spinner { display:inline-block; animation:spin 1s linear infinite; font-size:28px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Étapes -->
+<div class="steps">
+  <div class="step-dot active" id="dot1">01</div>
+  <div class="step-line" id="line1"></div>
+  <div class="step-dot" id="dot2">02</div>
+  <div class="step-line" id="line2"></div>
+  <div class="step-dot" id="dot3">03</div>
+</div>
+<div class="step-labels">
+  <div class="step-label active" id="lbl1">IDENTIFIER</div>
+  <div class="step-label" id="lbl2">PESER</div>
+  <div class="step-label" id="lbl3">CONFIRMER</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<form method="POST" id="depositForm" style="display:none;">
+  <input type="hidden" name="waste_type_id" id="fWasteTypeId">
+  <input type="hidden" name="point_id"      id="fPointId">
+  <input type="hidden" name="weight_kg"     id="fWeightKg">
+  <input type="hidden" name="notes"         id="fNotes">
+</form>
+
+<!-- ════════════ LAYOUT 2 colonnes ════════════════════════════ -->
+<div class="grid-2" style="gap:24px; align-items:start;">
+
+  <!-- ═══ COLONNE GAUCHE : Identifier + Peser ═══════════════════ -->
+  <div>
+
+    <!-- ── BLOC 1 : Identification ─────────────────────────── -->
+    <div class="card" style="margin-bottom:20px;">
+      <div class="card-header">
+        <span class="card-title">① Identifier le déchet</span>
+        <span id="stepBadge1" class="badge badge-amber">En attente</span>
+      </div>
+      <div class="card-body" style="padding:16px;">
+
+        <!-- Tabs -->
+        <div class="input-tabs">
+          <button type="button" class="input-tab active" id="tabCam"    onclick="switchInput('cam')">📷 Caméra</button>
+          <button type="button" class="input-tab"        id="tabUpload" onclick="switchInput('upload')">📁 Télécharger</button>
+        </div>
+
+        <!-- ── Panneau Caméra ──────────────────────────────── -->
+        <div id="panelCam">
+          <div class="scan-zone" id="scanZone">
+            <!-- Placeholder avant activation -->
+            <div id="camPlaceholder" class="waiting-state" style="min-height:200px;">
+              <div class="big">📷</div>
+              <div style="font-weight:700;margin-bottom:4px;">Activez la caméra</div>
+              <div style="font-size:12px;">Pointez votre déchet dans le cadre</div>
+            </div>
+            <!-- Flux vidéo -->
+            <video id="videoEl" autoplay playsinline muted style="display:none;"></video>
+            <canvas id="snapCanvas" style="display:none;"></canvas>
+            <!-- Cadre de scan (affiché quand caméra active) -->
+            <div class="scan-overlay" id="scanOverlay" style="display:none;">
+              <div class="scan-frame"><span></span><div class="scan-beam"></div></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button type="button" onclick="startCam()"    id="btnCam"    class="btn btn-outline" style="flex:1;">🎥 Activer</button>
+            <button type="button" onclick="snapAndAnalyze()" id="btnSnap" class="btn btn-primary" style="flex:1;" disabled>📸 Analyser</button>
+          </div>
+        </div>
+
+        <!-- ── Panneau Upload ──────────────────────────────── -->
+        <div id="panelUpload" style="display:none;">
+          <div class="scan-zone" id="dropZone"
+               onclick="document.getElementById('fileInput').click()"
+               ondragover="event.preventDefault();this.classList.add('active')"
+               ondragleave="this.classList.remove('active')"
+               ondrop="handleDrop(event)"
+               style="cursor:pointer;min-height:160px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;padding:24px;">
+            <div style="font-size:38px;">📁</div>
+            <div style="font-weight:700;">Glissez une photo ici</div>
+            <div style="font-size:12px;color:var(--muted);">ou cliquez pour choisir (JPG · PNG · WEBP)</div>
+            <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleFile(event)">
+          </div>
+          <!-- Aperçu image uploadée -->
+          <div id="uploadPreview" style="display:none;margin-top:10px;text-align:center;">
+            <img id="previewImg" style="max-height:180px;border-radius:10px;margin-bottom:10px;border:1px solid var(--border);">
+            <div style="display:flex;gap:8px;justify-content:center;">
+              <button type="button" onclick="analyzeUpload()" class="btn btn-primary">🔍 Analyser cette photo</button>
+              <button type="button" onclick="resetUpload()"   class="btn btn-outline">✕ Changer</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Analyse en cours ────────────────────────────── -->
+        <div id="analyzing" style="display:none;text-align:center;padding:20px;">
+          <div class="spinner">⚙️</div>
+          <div style="margin-top:10px;color:var(--muted);font-size:13px;">Analyse IA en cours…</div>
+        </div>
+
+        <!-- ── Résultat identifié ──────────────────────────── -->
+        <div id="resultBlock" style="display:none;margin-top:14px;">
+          <div class="identified-card" id="identifiedCard">
+            <div class="id-icon" id="resIcon">♻️</div>
+            <div style="flex:1;">
+              <div class="id-name" id="resName">—</div>
+              <div class="id-price" id="resPrice">—</div>
+              <div class="conf-bar"><div class="conf-fill" id="confFill"></div></div>
+              <div class="id-method" id="resMethod">—</div>
+            </div>
+            <button type="button" onclick="resetIdentification()" class="btn btn-outline btn-sm" style="flex-shrink:0;">🔄 Rescanner</button>
+          </div>
+
+          <!-- Correction si confiance faible -->
+          <div id="lowConfWarn" style="display:none;margin-top:10px;padding:10px 14px;background:rgba(239,159,39,.08);border:1px solid rgba(239,159,39,.3);border-radius:8px;font-size:12px;color:var(--amber);">
+            ⚠️ Confiance faible — vérifiez que le matériau est correct ci-dessous.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── BLOC 2 : Poids ──────────────────────────────────── -->
+    <div class="card" id="weightBlock" style="margin-bottom:20px;opacity:.4;pointer-events:none;transition:opacity .3s;">
+      <div class="card-header">
+        <span class="card-title">② Saisir le poids</span>
+        <span id="stepBadge2" class="badge badge-gray">Verrouillé</span>
+      </div>
+      <div class="card-body" style="padding:16px;">
+        <div style="position:relative;">
+          <input type="number" id="weightInput" placeholder="Ex : 5.5"
+                 step="0.1" min="0.1" max="500"
+                 oninput="onWeightChange()"
+                 style="font-size:22px;font-weight:800;padding-right:56px;width:100%;">
+          <span style="position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-family:'Space Mono',monospace;font-size:14px;">kg</span>
+        </div>
+        <div class="weight-presets">
+          {% for w in [0.5, 1, 2, 5, 10, 20, 50] %}
+          <button type="button" class="weight-btn" onclick="setWeight({{ w }})">{{ w }} kg</button>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BLOC 3 : Notes ──────────────────────────────────── -->
+    <div class="card" id="notesBlock" style="opacity:.4;pointer-events:none;transition:opacity .3s;">
+      <div class="card-header"><span class="card-title">③ Notes (optionnel)</span></div>
+      <div class="card-body" style="padding:16px;">
+        <textarea id="notesInput" rows="2"
+                  placeholder="Ex : bouteilles propres et triées par couleur…"
+                  style="width:100%;resize:vertical;"></textarea>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══ COLONNE DROITE : Calcul + Point + Submit ════════════ -->
+  <div>
+
+    <!-- Calcul live -->
+    <div class="calc-card" style="margin-bottom:20px;">
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:#4ECFA0;letter-spacing:3px;margin-bottom:8px;">MONTANT ESTIMÉ</div>
+      <div id="calcAmount" style="font-size:54px;font-weight:800;color:#fff;line-height:1;">—</div>
+      <div style="font-family:'Space Mono',monospace;font-size:11px;color:#4ECFA0;margin-top:6px;">FCFA · paiement en &lt; 10 s</div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.08);
+                  display:flex;justify-content:space-around;">
+        <div style="text-align:center;">
+          <div id="calcKg"     style="font-size:18px;font-weight:800;color:#F0A32B;">—</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.3);font-family:'Space Mono',monospace;margin-top:2px;">POIDS</div>
+        </div>
+        <div style="text-align:center;">
+          <div id="calcPpKg"   style="font-size:18px;font-weight:800;color:#4ECFA0;">—</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.3);font-family:'Space Mono',monospace;margin-top:2px;">PRIX/KG</div>
+        </div>
+        <div style="text-align:center;">
+          <div id="calcPts"    style="font-size:18px;font-weight:800;color:#8B82E0;">—</div>
+          <div style="font-size:9px;color:rgba(255,255,255,.3);font-family:'Space Mono',monospace;margin-top:2px;">POINTS</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Point de collecte -->
+    <div class="card" style="margin-bottom:20px;" id="pointCard" style="opacity:.4;">
+      <div class="card-header"><span class="card-title">📍 Point de collecte</span></div>
+      <div class="card-body" style="padding:16px;">
+        {% set cities = collection_points|groupby('city') %}
+        <select id="pointSelect" onchange="onPointChange()" style="width:100%;">
+          <option value="">-- Sélectionnez un point --</option>
+          {% for city, cpoints in cities %}
+          <optgroup label="🏙️ {{ city }}">
+            {% for cp in cpoints %}
+            <option value="{{ cp['id'] }}"
+                    data-address="{{ cp['address'] }}"
+                    data-city="{{ cp['city'] }}">
+              📍 {{ cp['name'] }}
+            </option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+        <div id="pointDetail" style="display:none;margin-top:8px;padding:10px;background:var(--surface);border-radius:8px;font-size:12px;color:var(--muted);"></div>
+      </div>
+    </div>
+
+    <!-- Bouton soumettre -->
+    <button type="button" onclick="submitDeposit()" id="submitBtn"
+            class="btn btn-primary btn-lg"
+            style="width:100%;justify-content:center;opacity:.4;pointer-events:none;"
+            disabled>
+      📦 Enregistrer le dépôt →
+    </button>
+
+    <!-- Résumé avant validation -->
+    <div id="summaryCard" style="display:none;margin-top:16px;padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;font-size:13px;">
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:10px;">RÉCAPITULATIF</div>
+      <div id="summaryRows"></div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── État global ────────────────────────────────────────────────────────────
+const STATE = {
+  wasteTypeId : null,
+  wasteName   : '',
+  wasteIcon   : '♻️',
+  pricePerKg  : 0,
+  colorHex    : '1D9E75',
+  unit        : 'kg',
+  confidence  : 0,
+  method      : '',
+  weightKg    : 0,
+  pointId     : null,
+  uploadedB64 : null,
+  camStream   : null,
+};
+
+// ── Tabs ───────────────────────────────────────────────────────────────────
+function switchInput(mode) {
+  stopCam();
+  ['cam','upload'].forEach(t => {
+    document.getElementById('panel'+cap(t)).style.display = t===mode ? 'block' : 'none';
+    document.getElementById('tab'+cap(t)).classList.toggle('active', t===mode);
+  });
+}
+const cap = s => s.charAt(0).toUpperCase()+s.slice(1);
+
+// ── Caméra ─────────────────────────────────────────────────────────────────
+async function startCam() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode:'environment', width:{ideal:1280}, height:{ideal:720} }
+    });
+    STATE.camStream = stream;
+    const v = document.getElementById('videoEl');
+    v.srcObject = stream;
+    v.style.display = 'block';
+    document.getElementById('camPlaceholder').style.display = 'none';
+    document.getElementById('scanOverlay').style.display    = 'flex';
+    document.getElementById('scanZone').classList.add('active');
+    document.getElementById('btnCam').textContent  = '🟢 Active';
+    document.getElementById('btnCam').disabled     = true;
+    document.getElementById('btnSnap').disabled    = false;
+  } catch(e) {
+    alert('Caméra non disponible : ' + e.message);
+  }
+}
+
+function stopCam() {
+  if (STATE.camStream) {
+    STATE.camStream.getTracks().forEach(t => t.stop());
+    STATE.camStream = null;
+  }
+}
+
+function snapAndAnalyze() {
+  const v = document.getElementById('videoEl');
+  const c = document.getElementById('snapCanvas');
+  c.width = v.videoWidth || 640; c.height = v.videoHeight || 480;
+  c.getContext('2d').drawImage(v, 0, 0);
+  const b64 = c.toDataURL('image/jpeg', 0.85);
+  sendForAnalysis(b64);
+}
+
+// ── Upload ─────────────────────────────────────────────────────────────────
+function handleFile(e) { loadFile(e.target.files[0]); }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('active');
+  loadFile(e.dataTransfer.files[0]);
+}
+
+function loadFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    STATE.uploadedB64 = ev.target.result;
+    document.getElementById('previewImg').src = STATE.uploadedB64;
+    document.getElementById('uploadPreview').style.display = 'block';
+    document.getElementById('dropZone').style.display      = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetUpload() {
+  STATE.uploadedB64 = null;
+  document.getElementById('uploadPreview').style.display = 'none';
+  document.getElementById('dropZone').style.display      = 'flex';
+  document.getElementById('fileInput').value = '';
+}
+
+function analyzeUpload() {
+  if (STATE.uploadedB64) sendForAnalysis(STATE.uploadedB64);
+}
+
+// ── Envoi pour analyse IA ──────────────────────────────────────────────────
+async function sendForAnalysis(b64) {
+  // Masquer résultat, afficher spinner
+  document.getElementById('resultBlock').style.display = 'none';
+  document.getElementById('analyzing').style.display   = 'block';
+  document.getElementById('scanZone').classList.remove('success','error');
+
+  try {
+    const res  = await fetch('/scan/identify', {
+      method  : 'POST',
+      headers : {'Content-Type':'application/json'},
+      body    : JSON.stringify({ image_b64: b64 }),
+    });
+    const data = await res.json();
+    document.getElementById('analyzing').style.display = 'none';
+
+    if (res.ok && !data.error) {
+      applyIdentification(data);
+    } else {
+      showIdError(data.error || 'Identification échouée.');
+    }
+  } catch(e) {
+    document.getElementById('analyzing').style.display = 'none';
+    showIdError('Erreur réseau — réessayez.');
+  }
+}
+
+// ── Application du résultat ────────────────────────────────────────────────
+function applyIdentification(data) {
+  // Mettre à jour l'état
+  STATE.wasteTypeId = data.waste_type_id;
+  STATE.wasteName   = data.waste_name;
+  STATE.wasteIcon   = data.icon   || '♻️';
+  STATE.pricePerKg  = parseFloat(data.price_fcfa || 0);
+  STATE.colorHex    = data.color_hex || '1D9E75';
+  STATE.unit        = data.unit  || 'kg';
+  STATE.confidence  = parseInt(data.confidence || 0);
+  STATE.method      = data.method || '';
+
+  // Remplir la carte résultat
+  document.getElementById('resIcon').textContent  = STATE.wasteIcon;
+  document.getElementById('resName').textContent  = STATE.wasteName;
+  document.getElementById('resPrice').textContent =
+    STATE.pricePerKg.toLocaleString('fr-FR') + ' FCFA / ' + STATE.unit;
+  document.getElementById('resPrice').style.color = '#' + STATE.colorHex;
+
+  const conf = STATE.confidence;
+  document.getElementById('confFill').style.width      = conf + '%';
+  document.getElementById('confFill').style.background =
+    conf>=80 ? 'var(--green)' : conf>=60 ? 'var(--amber)' : 'var(--coral)';
+
+  const methodLabels = {
+    qr_scan:'🔲 QR Code scanné', color_analysis:'🎨 Analyse IA',
+    manual:'✏️ Saisie manuelle', fallback:'⚠️ Générique', default:'⚙️ Détection auto'
+  };
+  document.getElementById('resMethod').textContent =
+    (methodLabels[STATE.method]||STATE.method) + ' · ' + conf + '% confiance';
+
+  // Afficher le bloc résultat
+  document.getElementById('resultBlock').style.display = 'block';
+  document.getElementById('scanZone').classList.add('success');
+  document.getElementById('lowConfWarn').style.display = conf < 60 ? 'block' : 'none';
+
+  // Badge étape 1 → done
+  setStepDone(1);
+
+  // Débloquer le bloc poids
+  unlockWeightBlock();
+  updateCalc();
+  checkSubmitReady();
+}
+
+function showIdError(msg) {
+  document.getElementById('scanZone').classList.add('error');
+  // Petite alerte inline sous la zone scan
+  let err = document.getElementById('idErrorMsg');
+  if (!err) {
+    err = document.createElement('div');
+    err.id = 'idErrorMsg';
+    err.style.cssText = 'margin-top:8px;padding:10px;background:rgba(217,95,53,.1);border:1px solid var(--coral);border-radius:8px;font-size:12px;color:var(--coral);';
+    document.getElementById('panelCam').appendChild(err);
+  }
+  err.textContent = '❌ ' + msg;
+  err.style.display = 'block';
+}
+
+function resetIdentification() {
+  STATE.wasteTypeId = null;
+  document.getElementById('resultBlock').style.display = 'none';
+  document.getElementById('scanZone').classList.remove('success','error');
+  document.getElementById('stepBadge1').className = 'badge badge-amber';
+  document.getElementById('stepBadge1').textContent = 'En attente';
+  document.getElementById('dot1').className = 'step-dot active';
+  document.getElementById('dot1').textContent = '01';
+  document.getElementById('line1').classList.remove('done');
+  document.getElementById('dot2').className = 'step-dot';
+  document.getElementById('lbl1').classList.add('active');
+  document.getElementById('lbl2').classList.remove('active');
+  lockWeightBlock();
+  checkSubmitReady();
+}
+
+// ── Poids ──────────────────────────────────────────────────────────────────
+function unlockWeightBlock() {
+  const wb = document.getElementById('weightBlock');
+  const nb = document.getElementById('notesBlock');
+  wb.style.opacity = '1'; wb.style.pointerEvents = 'auto';
+  nb.style.opacity = '1'; nb.style.pointerEvents = 'auto';
+  document.getElementById('stepBadge2').className = 'badge badge-amber';
+  document.getElementById('stepBadge2').textContent = 'À remplir';
+  document.getElementById('weightInput').focus();
+}
+function lockWeightBlock() {
+  const wb = document.getElementById('weightBlock');
+  wb.style.opacity = '.4'; wb.style.pointerEvents = 'none';
+  document.getElementById('stepBadge2').className = 'badge badge-gray';
+  document.getElementById('stepBadge2').textContent = 'Verrouillé';
+  STATE.weightKg = 0; updateCalc();
+}
+
+function setWeight(w) {
+  document.getElementById('weightInput').value = w;
+  onWeightChange();
+}
+
+function onWeightChange() {
+  const w = parseFloat(document.getElementById('weightInput').value) || 0;
+  STATE.weightKg = w;
+  updateCalc();
+  if (w > 0) setStepDone(2);
+  checkSubmitReady();
+}
+
+// ── Point de collecte ──────────────────────────────────────────────────────
+function onPointChange() {
+  const sel = document.getElementById('pointSelect');
+  const opt = sel.options[sel.selectedIndex];
+  STATE.pointId = sel.value || null;
+  const det = document.getElementById('pointDetail');
+  if (opt && opt.dataset.address) {
+    det.style.display = 'block';
+    det.innerHTML = `📍 <strong>${opt.textContent.trim()}</strong><br>${opt.dataset.address}, ${opt.dataset.city}`;
+  } else {
+    det.style.display = 'none';
+  }
+  checkSubmitReady();
+}
+
+// ── Calcul live ────────────────────────────────────────────────────────────
+function updateCalc() {
+  const w = STATE.weightKg, p = STATE.pricePerKg;
+  if (w > 0 && p > 0) {
+    document.getElementById('calcAmount').textContent = (w*p).toLocaleString('fr-FR',{maximumFractionDigits:0});
+    document.getElementById('calcKg').textContent     = w + ' ' + STATE.unit;
+    document.getElementById('calcPpKg').textContent   = p.toLocaleString('fr-FR') + ' ₣';
+    document.getElementById('calcPts').textContent    = Math.round(w*10) + ' pts';
+  } else {
+    ['calcAmount','calcKg','calcPpKg','calcPts'].forEach(id =>
+      document.getElementById(id).textContent = '—');
+  }
+}
+
+// ── Étapes visuelles ───────────────────────────────────────────────────────
+function setStepDone(n) {
+  const dot  = document.getElementById('dot'+n);
+  const lbl  = document.getElementById('lbl'+n);
+  const line = document.getElementById('line'+n);
+  dot.className = 'step-dot done'; dot.textContent = '✓';
+  lbl.classList.remove('active');
+  if (line) line.classList.add('done');
+  const next = document.getElementById('dot'+(n+1));
+  const nlbl = document.getElementById('lbl'+(n+1));
+  if (next) { next.classList.add('active'); }
+  if (nlbl) { nlbl.classList.add('active'); }
+  if (n===1) {
+    document.getElementById('stepBadge1').className = 'badge badge-green';
+    document.getElementById('stepBadge1').textContent = '✓ Identifié';
+  }
+  if (n===2) {
+    document.getElementById('stepBadge2').className = 'badge badge-green';
+    document.getElementById('stepBadge2').textContent = '✓ Pesé';
+  }
+}
+
+// ── Vérification et activation du bouton ───────────────────────────────────
+function checkSubmitReady() {
+  const ready = STATE.wasteTypeId && STATE.weightKg > 0 && STATE.pointId;
+  const btn   = document.getElementById('submitBtn');
+  btn.disabled            = !ready;
+  btn.style.opacity       = ready ? '1'    : '.4';
+  btn.style.pointerEvents = ready ? 'auto' : 'none';
+
+  // Récapitulatif
+  if (ready) {
+    document.getElementById('summaryCard').style.display = 'block';
+    document.getElementById('summaryRows').innerHTML = [
+      ['Type',    STATE.wasteIcon + ' ' + STATE.wasteName],
+      ['Poids',   STATE.weightKg + ' ' + STATE.unit],
+      ['Prix/kg', STATE.pricePerKg.toLocaleString('fr-FR') + ' FCFA'],
+      ['Total',   (STATE.weightKg * STATE.pricePerKg).toLocaleString('fr-FR', {maximumFractionDigits:0}) + ' FCFA'],
+      ['Point',   document.getElementById('pointSelect').options[document.getElementById('pointSelect').selectedIndex]?.textContent?.trim() || '—'],
+    ].map(([k,v]) => `
+      <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:12px;color:var(--muted);font-family:'Space Mono',monospace;">${k}</span>
+        <span style="font-size:12px;font-weight:700;">${v}</span>
+      </div>`).join('');
+  } else {
+    document.getElementById('summaryCard').style.display = 'none';
+  }
+}
+
+// ── Soumission finale ──────────────────────────────────────────────────────
+function submitDeposit() {
+  if (!STATE.wasteTypeId || !STATE.weightKg || !STATE.pointId) {
+    alert('Complétez toutes les étapes avant de soumettre.'); return;
+  }
+  document.getElementById('fWasteTypeId').value = STATE.wasteTypeId;
+  document.getElementById('fPointId').value      = STATE.pointId;
+  document.getElementById('fWeightKg').value     = STATE.weightKg;
+  document.getElementById('fNotes').value        = document.getElementById('notesInput').value;
+
+  const btn = document.getElementById('submitBtn');
+  btn.textContent = '⏳ Enregistrement…'; btn.disabled = true;
+  document.getElementById('depositForm').submit();
+}
+</script>
+{% endblock %}

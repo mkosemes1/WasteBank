@@ -1,0 +1,502 @@
+{% extends "dashboard/layout.html" %}
+{% block title %}Scanner un déchet{% endblock %}
+{% block page_title %}📷 Scanner & Identifier{% endblock %}
+
+{% block head %}
+<style>
+  .scan-tabs { display:flex; gap:0; margin-bottom:24px; border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .scan-tab  { flex:1; padding:12px; text-align:center; cursor:pointer; font-weight:700; font-size:14px; transition:all .2s; color:var(--muted); background:var(--bg2); }
+  .scan-tab.active { background:var(--green); color:#000; }
+
+  #cameraFeed { width:100%; max-height:340px; object-fit:cover; border-radius:12px; background:#000; display:block; }
+  #canvas { display:none; }
+
+  .capture-ring {
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:220px; height:220px; border:3px solid var(--green);
+    border-radius:16px; pointer-events:none;
+    box-shadow:0 0 0 9999px rgba(0,0,0,.45);
+  }
+
+  .capture-ring::before, .capture-ring::after {
+    content:''; position:absolute;
+    width:24px; height:24px;
+    border-color:var(--green-light); border-style:solid;
+  }
+  .capture-ring::before { top:-3px; left:-3px; border-width:3px 0 0 3px; border-radius:4px 0 0 0; }
+  .capture-ring::after  { bottom:-3px; right:-3px; border-width:0 3px 3px 0; border-radius:0 0 4px 0; }
+
+  .result-card {
+    background:var(--surface); border:2px solid var(--border); border-radius:14px;
+    padding:24px; text-align:center; transition:border-color .3s;
+  }
+  .result-card.identified { border-color:var(--green); }
+
+  .confidence-bar { height:6px; background:var(--surface2); border-radius:3px; overflow:hidden; margin-top:8px; }
+  .confidence-fill { height:100%; border-radius:3px; background:var(--green); transition:width .6s ease; }
+
+  .waste-icon-big { font-size:52px; margin-bottom:8px; }
+
+  @keyframes scanline {
+    0%   { top: 8px; }
+    100% { top: calc(100% - 8px); }
+  }
+  .scan-line {
+    position:absolute; left:8px; right:8px; height:2px;
+    background:linear-gradient(90deg, transparent, var(--green), transparent);
+    animation:scanline 2s linear infinite;
+    pointer-events:none;
+  }
+
+  .step-indicator {
+    display:flex; align-items:center; gap:0; margin-bottom:32px;
+  }
+  .step-dot {
+    width:32px; height:32px; border-radius:50%; border:2px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:800; color:var(--muted); flex-shrink:0;
+    font-family:'Space Mono',monospace;
+  }
+  .step-dot.active { border-color:var(--green); color:var(--green); background:rgba(29,158,117,.1); }
+  .step-dot.done   { border-color:var(--green); background:var(--green); color:#000; }
+  .step-line { flex:1; height:2px; background:var(--border); }
+  .step-line.done { background:var(--green); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Step indicator -->
+<div class="step-indicator">
+  <div class="step-dot active" id="step1">01</div>
+  <div class="step-line" id="line1"></div>
+  <div class="step-dot" id="step2">02</div>
+  <div class="step-line" id="line2"></div>
+  <div class="step-dot" id="step3">03</div>
+</div>
+<div style="display:flex;gap:0;margin-top:-24px;margin-bottom:28px;">
+  <div style="flex:1;text-align:left;font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;">IDENTIFIER</div>
+  <div style="flex:1;text-align:center;font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;">CONFIRMER</div>
+  <div style="flex:1;text-align:right;font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;">REÇU QR</div>
+</div>
+
+<div class="grid-2" style="gap:24px;align-items:start;">
+
+  <!-- GAUCHE : Scanner -->
+  <div>
+    <div class="scan-tabs">
+      <div class="scan-tab active" id="tabCamera" onclick="switchTab('camera')">📷 Photo IA</div>
+      <div class="scan-tab" id="tabQR" onclick="switchTab('qr')">🔲 Scan QR</div>
+      <div class="scan-tab" id="tabUpload" onclick="switchTab('upload')">📁 Upload</div>
+    </div>
+
+    <!-- Camera panel -->
+    <div id="panelCamera">
+      <div style="position:relative;border-radius:12px;overflow:hidden;background:#000;margin-bottom:16px;">
+        <video id="cameraFeed" autoplay playsinline muted></video>
+        <canvas id="canvas"></canvas>
+        <div class="capture-ring" id="captureRing" style="display:none;">
+          <div class="scan-line" id="scanLine" style="display:none;"></div>
+        </div>
+        <div id="cameraPlaceholder" style="height:260px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);">
+          <div style="font-size:48px;margin-bottom:12px;">📷</div>
+          <div style="font-size:13px;">Activez la caméra pour identifier</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="startCamera()" class="btn btn-outline" style="flex:1;" id="btnStart">🎥 Activer la caméra</button>
+        <button onclick="captureAndIdentify()" class="btn btn-primary" style="flex:1;" id="btnCapture" disabled>📸 Analyser</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:10px;">
+        Placez l'objet dans le cadre et appuyez sur Analyser
+      </div>
+    </div>
+
+    <!-- QR Scan panel -->
+    <div id="panelQR" style="display:none;">
+      <div style="position:relative;border-radius:12px;overflow:hidden;background:#000;margin-bottom:16px;">
+        <video id="qrFeed" autoplay playsinline muted style="width:100%;max-height:300px;object-fit:cover;display:block;"></video>
+        <div class="capture-ring" style="display:block;">
+          <div class="scan-line"></div>
+        </div>
+        <div id="qrPlaceholder" style="height:260px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);">
+          <div style="font-size:48px;margin-bottom:12px;">🔲</div>
+          <div style="font-size:13px;">Activez la caméra pour scanner un QR code</div>
+        </div>
+      </div>
+      <button onclick="startQRCamera()" class="btn btn-outline" style="width:100%;" id="btnQRStart">🎥 Activer la caméra</button>
+      <div style="font-size:11px;color:var(--muted);text-align:center;margin-top:10px;">
+        Pointez vers le QR code du produit WasteBank
+      </div>
+    </div>
+
+    <!-- Upload panel -->
+    <div id="panelUpload" style="display:none;">
+      <div style="border:2px dashed var(--border);border-radius:12px;padding:40px;text-align:center;cursor:pointer;transition:border-color .2s;"
+           onclick="document.getElementById('fileInput').click()"
+           ondragover="event.preventDefault();this.style.borderColor='var(--green)'"
+           ondrop="handleDrop(event)" id="dropZone">
+        <div style="font-size:40px;margin-bottom:12px;">📁</div>
+        <div style="font-weight:700;margin-bottom:4px;">Glissez une photo ici</div>
+        <div style="font-size:12px;color:var(--muted);">ou cliquez pour choisir (JPG, PNG, WEBP)</div>
+        <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFileSelect(event)">
+      </div>
+      <div id="uploadPreview" style="display:none;margin-top:16px;text-align:center;">
+        <img id="previewImg" style="max-height:200px;border-radius:10px;margin-bottom:12px;">
+        <br>
+        <button onclick="analyzeUpload()" class="btn btn-primary">🔍 Analyser cette photo</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DROITE : Résultat + Continuer -->
+  <div>
+    <div class="result-card" id="resultCard">
+      <div id="resultIdle">
+        <div style="font-size:40px;margin-bottom:12px;color:var(--muted);">♻️</div>
+        <div style="font-size:16px;font-weight:700;color:var(--muted);">En attente d'analyse…</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:8px;">
+          Scannez ou photographiez votre déchet pour l'identifier automatiquement.
+        </div>
+      </div>
+
+      <div id="resultFound" style="display:none;">
+        <div id="wasteIcon" class="waste-icon-big">♻️</div>
+        <div id="wasteName" style="font-size:22px;font-weight:800;margin-bottom:6px;">—</div>
+        <div id="wastePrice" style="font-size:32px;font-weight:800;color:var(--green);margin-bottom:16px;">—</div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;">CONFIANCE IA</span>
+          <span id="confText" style="font-size:12px;font-weight:700;color:var(--green);"></span>
+        </div>
+        <div class="confidence-bar">
+          <div class="confidence-fill" id="confBar" style="width:0%;"></div>
+        </div>
+        <div id="methodBadge" style="margin-top:10px;"></div>
+
+        <!-- Correction manuelle -->
+        <details style="margin-top:16px;text-align:left;">
+          <summary style="font-size:12px;color:var(--muted);cursor:pointer;">⚙️ Corriger manuellement</summary>
+          <select id="manualCorrect" style="width:100%;margin-top:10px;" onchange="applyManualCorrection(this.value)">
+            <option value="">-- Choisir --</option>
+            {% for wt in [] %}{% endfor %}
+          </select>
+          <div id="manualTypes" style="display:flex;flex-direction:column;gap:6px;margin-top:8px;"></div>
+        </details>
+      </div>
+
+      <div id="resultError" style="display:none;">
+        <div style="font-size:40px;margin-bottom:12px;">❌</div>
+        <div id="errorMsg" style="color:var(--coral);font-weight:700;">Erreur d'identification</div>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="analysisLoading" style="display:none;text-align:center;padding:24px;">
+      <div style="font-size:32px;animation:spin 1s linear infinite;display:inline-block;">⚙️</div>
+      <div style="margin-top:12px;color:var(--muted);">Analyse en cours…</div>
+    </div>
+
+    <!-- CTA -->
+    <div id="ctaSection" style="display:none;margin-top:16px;">
+      <a id="continueBtn" href="#" class="btn btn-primary btn-lg" style="width:100%;justify-content:center;">
+        ✓ Confirmer et peser → 
+      </a>
+      <button onclick="resetScan()" class="btn btn-outline" style="width:100%;margin-top:8px;">
+        🔄 Rescanner
+      </button>
+    </div>
+
+    <!-- Info box -->
+    <div class="card mt-3">
+      <div class="card-body" style="padding:16px;">
+        <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px;font-family:'Space Mono',monospace;letter-spacing:2px;">COMMENT ÇA MARCHE</div>
+        {% for icon, title, desc in [
+          ('📷','Photo IA','Prenez une photo claire de votre déchet — l\'IA identifie le matériau.'),
+          ('🔲','Scan QR','Scannez le QR code imprimé sur l\'emballage WasteBank partenaire.'),
+          ('📁','Upload','Importez une photo depuis votre galerie.'),
+        ] %}
+        <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;">
+          <span style="font-size:18px;flex-shrink:0;">{{ icon }}</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;">{{ title }}</div>
+            <div style="font-size:11px;color:var(--muted);">{{ desc }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden waste types data for manual correction -->
+<script>
+const WASTE_TYPES = [
+  {% for wt in waste_types if false %}{% endfor %}
+];
+</script>
+<!-- We'll load types via API -->
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let currentStream = null;
+let currentWasteTypeId = null;
+let uploadedImageB64 = null;
+let qrScanInterval = null;
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+function switchTab(tab) {
+  stopCamera();
+  ['camera','qr','upload'].forEach(t => {
+    document.getElementById('panel'+t.charAt(0).toUpperCase()+t.slice(1)).style.display = t===tab ? 'block' : 'none';
+    document.getElementById('tab'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active', t===tab);
+  });
+}
+
+// ── Camera ─────────────────────────────────────────────────────────────────
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    currentStream = stream;
+    const video = document.getElementById('cameraFeed');
+    video.srcObject = stream;
+    document.getElementById('cameraPlaceholder').style.display = 'none';
+    document.getElementById('captureRing').style.display = 'block';
+    document.getElementById('scanLine').style.display = 'block';
+    document.getElementById('btnCapture').disabled = false;
+    document.getElementById('btnStart').textContent = '🟢 Caméra active';
+  } catch(e) {
+    alert('Impossible d\'accéder à la caméra : ' + e.message);
+  }
+}
+
+async function startQRCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    currentStream = stream;
+    const video = document.getElementById('qrFeed');
+    video.srcObject = stream;
+    document.getElementById('qrPlaceholder').style.display = 'none';
+    document.getElementById('btnQRStart').textContent = '🟢 Scan en cours…';
+
+    // Auto-capture toutes les 1.5s
+    qrScanInterval = setInterval(() => captureAndDecodeQR(video), 1500);
+  } catch(e) {
+    alert('Caméra non disponible : ' + e.message);
+  }
+}
+
+function stopCamera() {
+  if (currentStream) {
+    currentStream.getTracks().forEach(t => t.stop());
+    currentStream = null;
+  }
+  if (qrScanInterval) { clearInterval(qrScanInterval); qrScanInterval = null; }
+}
+
+// ── Capture & Identify ─────────────────────────────────────────────────────
+async function captureAndIdentify() {
+  const video = document.getElementById('cameraFeed');
+  const canvas = document.getElementById('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+  const b64 = canvas.toDataURL('image/jpeg', 0.85);
+  await sendForIdentification(b64, 'photo');
+}
+
+async function captureAndDecodeQR(video) {
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const b64 = canvas.toDataURL('image/jpeg', 0.8);
+  await sendForIdentification(b64, 'qr');
+}
+
+async function analyzeUpload() {
+  if (!uploadedImageB64) return;
+  await sendForIdentification(uploadedImageB64, 'photo');
+}
+
+async function sendForIdentification(b64, mode) {
+  showLoading(true);
+  const endpoint = mode === 'qr' ? '/scan/decode-qr' : '/scan/identify';
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_b64: b64 }),
+    });
+    const data = await res.json();
+    showLoading(false);
+    if (res.ok && !data.error) {
+      showResult(data);
+      if (mode === 'qr' && qrScanInterval) {
+        // QR trouvé — arrêter le scan
+        clearInterval(qrScanInterval); qrScanInterval = null;
+        document.getElementById('btnQRStart').textContent = '✅ QR détecté !';
+      }
+    } else {
+      if (mode === 'qr') return; // Silencieux si QR pas trouvé
+      showError(data.error || 'Identification échouée. Réessayez.');
+    }
+  } catch(e) {
+    showLoading(false);
+    if (mode !== 'qr') showError('Erreur réseau.');
+  }
+}
+
+// ── File upload ────────────────────────────────────────────────────────────
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  loadImageFile(file);
+}
+
+function handleDrop(event) {
+  event.preventDefault();
+  const file = event.dataTransfer.files[0];
+  if (file) loadImageFile(file);
+}
+
+function loadImageFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    uploadedImageB64 = e.target.result;
+    document.getElementById('previewImg').src = uploadedImageB64;
+    document.getElementById('uploadPreview').style.display = 'block';
+    document.getElementById('dropZone').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── UI helpers ─────────────────────────────────────────────────────────────
+function showLoading(v) {
+  document.getElementById('analysisLoading').style.display = v ? 'block' : 'none';
+  document.getElementById('resultCard').style.display = v ? 'none' : 'block';
+  if (v) document.getElementById('ctaSection').style.display = 'none';
+}
+
+function showResult(data) {
+  currentWasteTypeId = data.waste_type_id;
+  document.getElementById('resultIdle').style.display = 'none';
+  document.getElementById('resultError').style.display = 'none';
+  document.getElementById('resultFound').style.display = 'block';
+  document.getElementById('resultCard').classList.add('identified');
+
+  document.getElementById('wasteIcon').textContent = data.icon || '♻️';
+  document.getElementById('wasteName').textContent = data.waste_name;
+  const price = parseFloat(data.price_fcfa || 0);
+  document.getElementById('wastePrice').textContent =
+    price.toLocaleString('fr-FR') + ' FCFA / ' + (data.unit || 'kg');
+  document.getElementById('wastePrice').style.color = '#' + (data.color_hex || '1D9E75');
+
+  const conf = parseInt(data.confidence || 0);
+  document.getElementById('confText').textContent = conf + '%';
+  document.getElementById('confBar').style.width = conf + '%';
+  document.getElementById('confBar').style.background =
+    conf >= 80 ? 'var(--green)' : conf >= 60 ? 'var(--amber)' : 'var(--coral)';
+
+  const method = data.method || '';
+  const methodLabels = {
+    'qr_scan': '🔲 QR Code scanné',
+    'color_analysis': '🎨 Analyse couleur IA',
+    'default': '⚙️ Détection générique',
+    'fallback': '⚠️ Fallback'
+  };
+  document.getElementById('methodBadge').innerHTML =
+    `<span style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;">${methodLabels[method]||method}</span>`;
+
+  // Charger les types pour correction manuelle
+  loadWasteTypesForCorrection(data.waste_type_id);
+
+  // CTA
+  const params = new URLSearchParams({
+    waste_type_id: data.waste_type_id,
+    waste_name: data.waste_name,
+    confidence: data.confidence,
+    method: data.method,
+  });
+  document.getElementById('continueBtn').href = '/scan/confirm?' + params;
+  document.getElementById('ctaSection').style.display = 'block';
+
+  // Mark step 1 done
+  document.getElementById('step1').classList.remove('active');
+  document.getElementById('step1').classList.add('done');
+  document.getElementById('step1').textContent = '✓';
+  document.getElementById('line1').classList.add('done');
+  document.getElementById('step2').classList.add('active');
+}
+
+function showError(msg) {
+  document.getElementById('resultIdle').style.display = 'none';
+  document.getElementById('resultFound').style.display = 'none';
+  document.getElementById('resultError').style.display = 'block';
+  document.getElementById('resultCard').classList.remove('identified');
+  document.getElementById('errorMsg').textContent = msg;
+}
+
+function resetScan() {
+  currentWasteTypeId = null;
+  uploadedImageB64 = null;
+  document.getElementById('resultFound').style.display = 'none';
+  document.getElementById('resultError').style.display = 'none';
+  document.getElementById('resultIdle').style.display = 'block';
+  document.getElementById('resultCard').classList.remove('identified');
+  document.getElementById('ctaSection').style.display = 'none';
+  document.getElementById('uploadPreview').style.display = 'none';
+  document.getElementById('dropZone').style.display = 'block';
+  document.getElementById('step1').classList.add('active');
+  document.getElementById('step1').classList.remove('done');
+  document.getElementById('step1').textContent = '01';
+  document.getElementById('line1').classList.remove('done');
+  document.getElementById('step2').classList.remove('active');
+}
+
+async function loadWasteTypesForCorrection(currentId) {
+  try {
+    const prices = await fetch('/api/prices').then(r => r.json());
+    const container = document.getElementById('manualTypes');
+    container.innerHTML = '';
+    prices.forEach(wt => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.style.cssText = `display:flex;align-items:center;gap:8px;padding:8px 12px;
+        background:${wt.id==currentId?'rgba(29,158,117,.15)':'var(--surface2)'};
+        border:1px solid ${wt.id==currentId?'var(--green)':'var(--border)'};
+        border-radius:8px;color:var(--text);cursor:pointer;font-family:'Syne',sans-serif;
+        font-size:12px;text-align:left;width:100%;`;
+      btn.innerHTML = `<span style="color:#${wt.color_hex};">${wt.icon}</span>
+        <span style="flex:1;font-weight:${wt.id==currentId?700:400};">${wt.name}</span>
+        <span style="color:var(--green);font-family:'Space Mono',monospace;font-size:10px;">
+          ${wt.price_fcfa} FCFA/kg</span>`;
+      btn.onclick = () => applyManualCorrectionFull(wt);
+      container.appendChild(btn);
+    });
+  } catch(e) {}
+}
+
+function applyManualCorrectionFull(wt) {
+  showResult({
+    waste_type_id: String(wt.id),
+    waste_name: wt.name,
+    price_fcfa: wt.price_fcfa,
+    unit: wt.unit,
+    icon: wt.icon,
+    color_hex: wt.color_hex,
+    confidence: 100,
+    method: 'manual',
+  });
+}
+
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</script>
+<style>@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }</style>
+{% endblock %}

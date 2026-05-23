@@ -10,6 +10,7 @@ from routes.dashboard import dash_bp
 from routes.admin import admin_bp
 from routes.public import public_bp
 from routes.api import api_bp
+from routes.scan import scan_bp
 from models.db import init_db
 
 def create_app():
@@ -25,6 +26,7 @@ def create_app():
     app.register_blueprint(dash_bp, url_prefix="/dashboard")
     app.register_blueprint(admin_bp, url_prefix="/admin")
     app.register_blueprint(api_bp, url_prefix="/api")
+    app.register_blueprint(scan_bp, url_prefix="/scan")
 
     # DB lifecycle
     @app.teardown_appcontext

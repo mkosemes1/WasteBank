@@ -1,0 +1,160 @@
+{% extends "dashboard/layout.html" %}
+{% block title %}Reçu — {{ dep['qr_code'] }}{% endblock %}
+{% block page_title %}✅ Dépôt enregistré !{% endblock %}
+
+{% block head %}
+<style>
+  .step-indicator { display:flex; align-items:center; gap:0; margin-bottom:32px; }
+  .step-dot { width:32px; height:32px; border-radius:50%; border:2px solid var(--border);
+    display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:800; color:var(--muted); flex-shrink:0; }
+  .step-dot.done { border-color:var(--green); background:var(--green); color:#000; }
+  .step-line { flex:1; height:2px; background:var(--green); }
+
+  .receipt-card {
+    background:var(--bg2); border:1px solid var(--border);
+    border-radius:16px; overflow:hidden; max-width:480px; margin:0 auto;
+  }
+  .receipt-header {
+    background:linear-gradient(135deg,var(--green-dark),#050F0A);
+    padding:24px; text-align:center;
+    border-bottom:1px solid var(--green-dark);
+  }
+  .qr-image {
+    display:block; width:280px; height:auto;
+    margin:0 auto; border-radius:12px;
+    image-rendering:pixelated;
+  }
+  .receipt-row {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:12px 24px; border-bottom:1px solid var(--border);
+  }
+  .receipt-row:last-child { border-bottom:none; }
+  .receipt-label { font-size:11px; color:var(--muted); font-family:'Space Mono',monospace; letter-spacing:1px; }
+  .receipt-value { font-size:13px; font-weight:700; }
+
+  @keyframes checkPulse {
+    0%   { transform:scale(0.8); opacity:0; }
+    60%  { transform:scale(1.15); }
+    100% { transform:scale(1); opacity:1; }
+  }
+  .check-anim { animation:checkPulse .5s ease forwards; }
+
+  @media print {
+    .sidebar, .topbar, .btn, .step-indicator { display:none !important; }
+    .main-content { margin:0 !important; }
+    .content-area { padding:0 !important; }
+    .receipt-card { max-width:100%; border:none; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Step indicator (all done) -->
+<div class="step-indicator">
+  <div class="step-dot done">✓</div>
+  <div class="step-line"></div>
+  <div class="step-dot done">✓</div>
+  <div class="step-line"></div>
+  <div class="step-dot done">✓</div>
+</div>
+
+<div class="receipt-card">
+
+  <!-- Header success -->
+  <div class="receipt-header">
+    <div class="check-anim" style="font-size:52px;margin-bottom:8px;">✅</div>
+    <div style="font-size:20px;font-weight:800;color:var(--white);margin-bottom:4px;">
+      Dépôt enregistré !
+    </div>
+    <div style="font-size:13px;color:var(--green-light);">
+      Présentez ce QR code au point de collecte
+    </div>
+  </div>
+
+  <!-- QR Code image -->
+  <div style="padding:28px;text-align:center;background:var(--surface);border-bottom:1px solid var(--border);">
+    <img src="{{ qr_b64 }}" alt="QR Code {{ dep['qr_code'] }}" class="qr-image" id="qrImg">
+    <div style="margin-top:12px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:3px;">
+      SCANNEZ CE CODE AU COLLECTEUR
+    </div>
+  </div>
+
+  <!-- Infos dépôt -->
+  <div class="receipt-row">
+    <span class="receipt-label">RÉFÉRENCE</span>
+    <span class="receipt-value" style="color:var(--green);letter-spacing:1px;">{{ dep['qr_code'] }}</span>
+  </div>
+  <div class="receipt-row">
+    <span class="receipt-label">TYPE DE DÉCHET</span>
+    <span class="receipt-value">{{ dep['icon'] }} {{ dep['waste_name'] }}</span>
+  </div>
+  <div class="receipt-row">
+    <span class="receipt-label">POIDS</span>
+    <span class="receipt-value">{{ dep['weight_kg'] }} {{ dep['unit'] }}</span>
+  </div>
+  <div class="receipt-row">
+    <span class="receipt-label">PRIX AU KILO</span>
+    <span class="receipt-value">{{ "%.0f"|format(dep['price_per_kg']) }} FCFA / kg</span>
+  </div>
+  <div class="receipt-row" style="background:rgba(29,158,117,.05);">
+    <span class="receipt-label">MONTANT TOTAL</span>
+    <span class="receipt-value" style="font-size:22px;color:var(--green);">{{ "%.0f"|format(dep['total_fcfa']) }} FCFA</span>
+  </div>
+  <div class="receipt-row">
+    <span class="receipt-label">POINT DE COLLECTE</span>
+    <span class="receipt-value" style="text-align:right;max-width:220px;">
+      📍 {{ dep['point_name'] }}<br>
+      <span style="font-size:11px;color:var(--muted);">{{ dep['address'] }}, {{ dep['city'] }}</span>
+    </span>
+  </div>
+  <div class="receipt-row">
+    <span class="receipt-label">DATE</span>
+    <span class="receipt-value">{{ dep['created_at'][:16] }}</span>
+  </div>
+  <div class="receipt-row">
+    <span class="receipt-label">STATUT</span>
+    <span class="badge badge-amber">⏳ En attente de validation</span>
+  </div>
+</div>
+
+<!-- Actions -->
+<div style="max-width:480px;margin:20px auto;display:flex;flex-direction:column;gap:10px;">
+  <button onclick="window.print()" class="btn btn-outline btn-lg" style="justify-content:center;width:100%;">
+    🖨️ Imprimer / Sauvegarder en PDF
+  </button>
+  <a href="{{ url_for('scan.confirm') }}" class="btn btn-primary btn-lg" style="justify-content:center;width:100%;">
+    ♻️ Nouveau scan
+  </a>
+  <a href="{{ url_for('dash.home') }}" class="btn btn-outline" style="justify-content:center;width:100%;">
+    ← Retour au tableau de bord
+  </a>
+</div>
+
+<!-- Instructions -->
+<div style="max-width:480px;margin:0 auto;">
+  <div class="card">
+    <div class="card-body" style="padding:18px;">
+      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:12px;font-family:'Space Mono',monospace;letter-spacing:2px;">PROCHAINES ÉTAPES</div>
+      {% for step, icon, title, desc in [
+        ('01','📍','Rendez-vous au point de collecte','Apportez vos déchets à ' ~ dep['point_name'] ~ '.'),
+        ('02','🔲','Montrez ce QR code','Le collecteur scanne votre code pour valider.'),
+        ('03','⚖️','Pesée officielle','La balance enregistre le poids exact.'),
+        ('04','💰','Paiement instantané','Votre compte est crédité en moins de 10 secondes.'),
+      ] %}
+      <div style="display:flex;gap:12px;align-items:flex-start;{% if not loop.last %}margin-bottom:12px;{% endif %}">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--green-dark);
+                     color:var(--green-light);display:flex;align-items:center;justify-content:center;
+                     font-family:'Space Mono',monospace;font-size:10px;font-weight:700;flex-shrink:0;">{{ step }}</div>
+        <div>
+          <div style="font-size:12px;font-weight:700;margin-bottom:2px;">{{ icon }} {{ title }}</div>
+          <div style="font-size:11px;color:var(--muted);">{{ desc }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}

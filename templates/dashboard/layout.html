@@ -14,8 +14,8 @@
       <a href="{{ url_for('dash.home') }}" class="nav-item {% if request.endpoint == 'dash.home' %}active{% endif %}">
         <span class="nav-icon">🏠</span> Tableau de bord
       </a>
-      <a href="{{ url_for('dash.new_deposit') }}" class="nav-item {% if request.endpoint == 'dash.new_deposit' %}active{% endif %}">
-        <span class="nav-icon">➕</span> Nouveau dépôt
+      <a href="{{ url_for('scan.confirm') }}" class="nav-item {% if 'scan' in request.endpoint %}active{% endif %}">
+        <span class="nav-icon">📷</span> Scanner un déchet
       </a>
       <a href="{{ url_for('dash.wallet') }}" class="nav-item {% if request.endpoint == 'dash.wallet' %}active{% endif %}">
         <span class="nav-icon">💰</span> Mon portefeuille

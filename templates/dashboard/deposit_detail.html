@@ -35,7 +35,7 @@
       <div style="margin-top:16px;">
         <a href="{{ url_for('dash.home') }}" class="btn btn-outline">← Retour</a>
         {% if dep['status'] == 'pending' %}
-        <a href="{{ url_for('dash.new_deposit') }}" class="btn btn-primary" style="margin-left:8px;">+ Nouveau dépôt</a>
+        <a href="{{ url_for('scan.confirm') }}" class="btn btn-primary" style="margin-left:8px;">+ Nouveau dépôt</a>
         {% endif %}
       </div>
     </div>
