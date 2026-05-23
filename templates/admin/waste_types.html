@@ -1,0 +1,94 @@
+{% extends "dashboard/layout.html" %}
+{% block title %}Types de déchets{% endblock %}
+{% block page_title %}♻️ Types de déchets & Prix{% endblock %}
+{% block content %}
+
+<div class="grid-2" style="margin-bottom:24px;">
+  <!-- Add new -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">➕ Ajouter un type</span></div>
+    <div class="card-body">
+      <form method="POST">
+        <input type="hidden" name="action" value="add">
+        <div class="form-group"><label>Nom</label><input type="text" name="name" required placeholder="Ex: Plastique HDPE"></div>
+        <div class="form-group"><label>Prix (FCFA/kg)</label><input type="number" name="price" step="0.5" min="1" required></div>
+        <div class="form-group"><label>Icône</label><input type="text" name="icon" value="♻️" style="width:80px;text-align:center;font-size:20px;"></div>
+        <div class="form-group"><label>Description</label><textarea name="description" rows="2" placeholder="Description courte..."></textarea></div>
+        <button type="submit" class="btn btn-primary">Ajouter</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Price impact calculator -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">🧮 Simulateur de prix</span></div>
+    <div class="card-body">
+      <div class="form-group"><label>Sélectionner un type</label>
+        <select id="simType" onchange="simulate()">
+          {% for wt in waste_types %}
+          <option value="{{ wt['price_fcfa'] }}">{{ wt['icon'] }} {{ wt['name'] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group"><label>Poids test (kg)</label><input type="number" id="simWeight" value="10" oninput="simulate()"></div>
+      <div style="background:var(--surface);border-radius:8px;padding:16px;text-align:center;">
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);">REVENU ESTIMÉ</div>
+        <div id="simResult" style="font-size:32px;font-weight:800;color:var(--green);">—</div>
+        <div style="font-size:11px;color:var(--muted);">FCFA</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Waste types table -->
+<div class="card">
+  <div class="card-header"><span class="card-title">Liste des types ({{ waste_types|length }})</span></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Type</th><th>Prix actuel</th><th>Description</th><th>Statut</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for wt in waste_types %}
+        <tr style="{% if not wt['active'] %}opacity:.4;{% endif %}">
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="dot" style="background:#{{ wt['color_hex'] }};width:10px;height:10px;border-radius:50%;display:inline-block;"></span>
+              <span style="font-size:18px;">{{ wt['icon'] }}</span>
+              <span style="font-weight:700;">{{ wt['name'] }}</span>
+            </div>
+          </td>
+          <td>
+            <form method="POST" style="display:inline-flex;gap:6px;align-items:center;">
+              <input type="hidden" name="action" value="update">
+              <input type="hidden" name="wt_id" value="{{ wt['id'] }}">
+              <input type="hidden" name="name" value="{{ wt['name'] }}">
+              <input type="hidden" name="description" value="{{ wt['description'] or '' }}">
+              <input type="number" name="price" value="{{ wt['price_fcfa'] }}" step="0.5" min="1" style="width:90px;padding:6px 8px;font-size:13px;">
+              <span style="font-size:12px;color:var(--muted);">FCFA/kg</span>
+              <button type="submit" class="btn btn-primary btn-sm">✓</button>
+            </form>
+          </td>
+          <td style="font-size:12px;color:var(--muted);">{{ wt['description'] or '—' }}</td>
+          <td>{% if wt['active'] %}<span class="badge badge-green">Actif</span>{% else %}<span class="badge badge-gray">Inactif</span>{% endif %}</td>
+          <td>
+            <form method="POST" style="display:inline;">
+              <input type="hidden" name="action" value="toggle">
+              <input type="hidden" name="wt_id" value="{{ wt['id'] }}">
+              <button type="submit" class="btn btn-outline btn-sm">{% if wt['active'] %}Désactiver{% else %}Activer{% endif %}</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function simulate() {
+  const price = parseFloat(document.getElementById('simType').value);
+  const weight = parseFloat(document.getElementById('simWeight').value) || 0;
+  document.getElementById('simResult').textContent = (price * weight).toLocaleString('fr-FR');
+}
+simulate();
+</script>
+{% endblock %}

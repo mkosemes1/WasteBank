@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Comment ça marche{% endblock %}
+{% block body %}
+<nav class="public-nav">
+  <a href="{{ url_for('public.index') }}" style="font-size:22px;font-weight:800;">
+    <span style="color:var(--green);">Waste</span><span style="color:var(--amber);">Bank</span>
+  </a>
+  <div style="display:flex;gap:8px;">
+    <a href="{{ url_for('public.index') }}" class="btn btn-outline btn-sm">← Accueil</a>
+    <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">S'inscrire</a>
+  </div>
+</nav>
+<div style="max-width:800px;margin:60px auto;padding:0 24px;">
+  <div class="section-label">GUIDE</div>
+  <h1 style="font-size:clamp(32px,5vw,52px);font-weight:800;letter-spacing:-2px;margin-bottom:8px;">Comment ça marche ?</h1>
+  <p style="color:var(--muted);margin-bottom:48px;font-size:16px;">De chez vous au paiement, tout en 4 étapes simples.</p>
+
+  <div style="display:flex;flex-direction:column;gap:0;">
+    {% for num, icon, title, desc, details in [
+      ('01','📱','Crée ton compte',
+       'Inscription gratuite en 2 minutes.',
+       ['Ton nom complet', 'Ton email', 'Ton numéro mobile money (Wave ou Orange Money)', 'Ta ville']),
+      ('02','♻️','Trie et prépare tes déchets',
+       'Sépare tes déchets par type pour maximiser tes gains.',
+       ['Plastique PET (bouteilles)', 'Aluminium (canettes, boîtes)', 'Papier et carton', 'Verre (bouteilles, bocaux)']),
+      ('03','📷','Enregistre ton dépôt dans l\'app',
+       'Crée un dépôt en quelques secondes.',
+       ['Sélectionne le type de déchet', 'Indique le poids estimé', 'Choisis ton point de collecte', 'Reçois ton QR code unique']),
+      ('04','📍','Va au point de collecte',
+       'Dépose tes déchets et fais valider ton QR code.',
+       ['Le collecteur scanne ton QR code', 'La balance connectée pèse tes déchets', 'La validation se fait en temps réel', 'Le paiement part immédiatement']),
+      ('05','💰','Reçois ton argent',
+       'Paiement instantané sur ton mobile money.',
+       ['Wave ou Orange Money', 'En moins de 10 secondes', 'Montant calculé automatiquement', 'Historique complet dans l\'app'])
+    ] %}
+    <div style="display:flex;gap:24px;padding:28px 0;border-bottom:1px solid var(--border);">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:0;">
+        <div style="width:44px;height:44px;border-radius:50%;background:var(--green-dark);color:var(--green-light);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:12px;font-weight:700;flex-shrink:0;">{{ num }}</div>
+        {% if not loop.last %}<div style="width:2px;flex:1;background:var(--border);margin:8px 0;min-height:40px;"></div>{% endif %}
+      </div>
+      <div style="flex:1;padding-top:8px;">
+        <div style="font-size:28px;margin-bottom:8px;">{{ icon }}</div>
+        <div style="font-size:20px;font-weight:800;margin-bottom:6px;">{{ title }}</div>
+        <div style="font-size:14px;color:var(--muted);margin-bottom:14px;">{{ desc }}</div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          {% for d in details %}
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;">
+            <span style="color:var(--green);font-weight:800;">✓</span> {{ d }}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div style="text-align:center;margin-top:48px;">
+    <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">♻️ Commencer maintenant</a>
+  </div>
+</div>
+{% endblock %}

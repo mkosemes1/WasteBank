@@ -1,0 +1,44 @@
+{% extends "dashboard/layout.html" %}
+{% block title %}Dépôt {{ dep['qr_code'] }}{% endblock %}
+{% block page_title %}📦 Détail du dépôt{% endblock %}
+{% block content %}
+<div style="max-width:560px;">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">{{ dep['icon'] }} {{ dep['waste_name'] }}</span>
+      {% if dep['status']=='paid' %}<span class="badge badge-green">✓ Payé</span>
+      {% elif dep['status']=='pending' %}<span class="badge badge-amber">⏳ En attente</span>
+      {% elif dep['status']=='rejected' %}<span class="badge badge-coral">✗ Refusé</span>
+      {% endif %}
+    </div>
+    <div class="card-body">
+      <div style="text-align:center;padding:24px;background:var(--surface);border-radius:12px;margin-bottom:20px;">
+        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:3px;margin-bottom:8px;">QR CODE / RÉFÉRENCE</div>
+        <div style="font-size:22px;font-weight:800;color:var(--green);letter-spacing:2px;">{{ dep['qr_code'] }}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">Présentez ce code au point de collecte</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        {% for label, val in [
+          ('Poids', dep['weight_kg']|string + ' ' + dep['unit']),
+          ('Prix/kg', "%.0f FCFA"|format(dep['price_per_kg'])),
+          ('Montant total', "%.0f FCFA"|format(dep['total_fcfa'])),
+          ('Point de collecte', dep['point_name']),
+          ('Ville', dep['city']),
+          ('Date', dep['created_at'][:16])
+        ] %}
+        <div style="padding:12px;background:var(--surface);border-radius:8px;">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:4px;font-family:'Space Mono',monospace;text-transform:uppercase;">{{ label }}</div>
+          <div style="font-weight:700;">{{ val }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      <div style="margin-top:16px;">
+        <a href="{{ url_for('dash.home') }}" class="btn btn-outline">← Retour</a>
+        {% if dep['status'] == 'pending' %}
+        <a href="{{ url_for('dash.new_deposit') }}" class="btn btn-primary" style="margin-left:8px;">+ Nouveau dépôt</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

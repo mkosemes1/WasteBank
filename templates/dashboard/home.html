@@ -1,0 +1,185 @@
+{% extends "dashboard/layout.html" %}
+{% block title %}Tableau de bord{% endblock %}
+{% block page_title %}Bonjour, {{ user['name'].split()[0] }} 👋{% endblock %}
+
+{% block content %}
+
+<!-- STATS -->
+<div class="stats-grid">
+  <div class="stat-card green">
+    <div class="stat-label">Solde disponible</div>
+    <div class="stat-value green">{{ "%.0f"|format(user['balance']) }}</div>
+    <div class="stat-sub">FCFA · <a href="{{ url_for('dash.wallet') }}" class="text-green">Retirer →</a></div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-label">Total collecté</div>
+    <div class="stat-value amber">{{ "%.1f"|format(stats['total_kg'] or 0) }}</div>
+    <div class="stat-sub">kilogrammes de déchets</div>
+  </div>
+  <div class="stat-card coral">
+    <div class="stat-label">Total gagné</div>
+    <div class="stat-value coral">{{ "%.0f"|format(stats['total_earned'] or 0) }}</div>
+    <div class="stat-sub">FCFA au total</div>
+  </div>
+  <div class="stat-card purple">
+    <div class="stat-label">Points éco</div>
+    <div class="stat-value purple">{{ user['points'] }}</div>
+    <div class="stat-sub">points de fidélité</div>
+  </div>
+</div>
+
+<div class="grid-2" style="gap:24px;margin-bottom:24px;">
+
+  <!-- NEW DEPOSIT CTA -->
+  <div class="balance-card">
+    <div class="balance-label">SOLDE PORTEFEUILLE</div>
+    <div class="balance-amount">{{ "%.0f"|format(user['balance']) }}<span class="balance-unit"> FCFA</span></div>
+    <div style="margin-top:24px;display:flex;gap:12px;">
+      <a href="{{ url_for('dash.new_deposit') }}" class="btn btn-primary">➕ Nouveau dépôt</a>
+      <a href="{{ url_for('dash.wallet') }}" class="btn btn-outline">💸 Retirer</a>
+    </div>
+  </div>
+
+  <!-- QUICK PRICES -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">💲 Prix du jour</span>
+      <a href="{{ url_for('public.prices') }}" class="text-muted" style="font-size:12px;">Voir tout →</a>
+    </div>
+    <div class="card-body" style="padding:12px 0;">
+      {% for wt in waste_types[:5] %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 20px;">
+        <div class="waste-dot">
+          <span class="dot" style="background:#{{ wt['color_hex'] }}"></span>
+          {{ wt['icon'] }} {{ wt['name'] }}
+        </div>
+        <span class="mono text-green" style="font-size:13px;">{{ "%.0f"|format(wt['price_fcfa']) }} FCFA/{{ wt['unit'] }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- CHART + RECENT DEPOSITS -->
+<div class="grid-2" style="gap:24px;margin-bottom:24px;">
+
+  <!-- CHART -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📈 Activité des 6 derniers mois</span>
+    </div>
+    <div class="card-body">
+      <canvas id="activityChart" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- PENDING DEPOSITS -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📦 Derniers dépôts</span>
+      <a href="{{ url_for('dash.new_deposit') }}" class="btn btn-primary btn-sm">+ Nouveau</a>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Type</th><th>Poids</th><th>Montant</th><th>Statut</th>
+        </tr></thead>
+        <tbody>
+          {% for d in deposits %}
+          <tr>
+            <td>
+              <div class="waste-dot">
+                <span class="dot" style="background:#{{ d['color_hex'] }}"></span>
+                {{ d['icon'] }} {{ d['waste_name'] }}
+              </div>
+            </td>
+            <td class="mono">{{ d['weight_kg'] }} kg</td>
+            <td class="mono text-amber">{{ "%.0f"|format(d['total_fcfa']) }} ₣</td>
+            <td>
+              {% if d['status'] == 'paid' %}
+                <span class="badge badge-green">✓ Payé</span>
+              {% elif d['status'] == 'pending' %}
+                <span class="badge badge-amber">⏳ En attente</span>
+              {% elif d['status'] == 'validated' %}
+                <span class="badge badge-purple">✓ Validé</span>
+              {% else %}
+                <span class="badge badge-coral">✗ Refusé</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:32px;">
+            Aucun dépôt pour l'instant. <a href="{{ url_for('dash.new_deposit') }}">Créer le premier →</a>
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- COLLECTION POINTS -->
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">📍 Points de collecte proches</span>
+    <a href="{{ url_for('public.points_map') }}" style="font-size:12px;color:var(--muted);">Voir la carte →</a>
+  </div>
+  <div class="grid-3" style="padding:20px;gap:12px;">
+    {% for cp in collection_points[:6] %}
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;">
+      <div style="font-weight:700;font-size:13px;margin-bottom:4px;">📍 {{ cp['name'] }}</div>
+      <div style="font-size:12px;color:var(--muted);">{{ cp['address'] }}</div>
+      <div style="font-size:11px;color:var(--green);font-family:'Space Mono',monospace;margin-top:6px;">{{ cp['city'] }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const months = {{ monthly | map(attribute='month') | list | tojson }};
+const kgData  = {{ monthly | map(attribute='kg')    | list | tojson }};
+const fcfaData= {{ monthly | map(attribute='fcfa')  | list | tojson }};
+
+new Chart(document.getElementById('activityChart'), {
+  type: 'bar',
+  data: {
+    labels: months,
+    datasets: [
+      {
+        label: 'Kg collectés',
+        data: kgData,
+        backgroundColor: 'rgba(29,158,117,.6)',
+        borderColor: '#1D9E75',
+        borderWidth: 1,
+        yAxisID: 'y',
+      },
+      {
+        label: 'FCFA gagnés',
+        data: fcfaData,
+        type: 'line',
+        borderColor: '#EF9F27',
+        backgroundColor: 'rgba(239,159,39,.1)',
+        borderWidth: 2,
+        pointBackgroundColor: '#EF9F27',
+        tension: .4,
+        yAxisID: 'y1',
+        fill: true,
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#888780', font: { family: 'Space Mono', size: 10 } } } },
+    scales: {
+      x: { ticks: { color: '#888780' }, grid: { color: '#2A2A28' } },
+      y: { ticks: { color: '#1D9E75' }, grid: { color: '#2A2A28' }, position: 'left' },
+      y1: { ticks: { color: '#EF9F27' }, grid: { display: false }, position: 'right' },
+    }
+  }
+});
+</script>
+{% endblock %}

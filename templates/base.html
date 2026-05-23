@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}WasteBank{% endblock %} — Transforme les déchets en revenus</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='28'>♻</text></svg>">
+{% block head %}{% endblock %}
+</head>
+<body>
+
+<!-- Flash messages -->
+<div class="flash-container" id="flashContainer">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash {{ category }}" onclick="this.remove()">
+        <span>{% if category == 'success' %}✓{% elif category == 'error' %}✗{% elif category == 'warning' %}⚠{% else %}ℹ{% endif %}</span>
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endwith %}
+</div>
+
+{% block body %}{% endblock %}
+
+<script>
+  // Auto-dismiss flash messages
+  setTimeout(() => {
+    document.querySelectorAll('.flash').forEach(f => {
+      f.style.transition = 'opacity .4s';
+      f.style.opacity = '0';
+      setTimeout(() => f.remove(), 400);
+    });
+  }, 4000);
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Connexion{% endblock %}
+{% block body %}
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:20px;">
+  <div style="width:100%;max-width:420px;">
+
+    <!-- Logo -->
+    <div style="text-align:center;margin-bottom:40px;">
+      <a href="{{ url_for('public.index') }}" style="font-size:36px;font-weight:800;letter-spacing:-1px;">
+        <span style="color:var(--green);">Waste</span><span style="color:var(--amber);">Bank</span>
+      </a>
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:3px;margin-top:4px;">PLATEFORME CITOYENNE</div>
+    </div>
+
+    <div class="card">
+      <div class="card-header" style="justify-content:center;">
+        <span class="card-title" style="font-size:18px;">Connexion à votre compte</span>
+      </div>
+      <div class="card-body">
+        <form method="POST">
+          <div class="form-group">
+            <label>Adresse email</label>
+            <input type="email" name="email" required autofocus placeholder="votre@email.com">
+          </div>
+          <div class="form-group">
+            <label>Mot de passe</label>
+            <input type="password" name="password" required placeholder="••••••••">
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:8px;">
+            → Se connecter
+          </button>
+        </form>
+
+        <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);text-align:center;">
+          <p style="font-size:13px;color:var(--muted);">Pas encore de compte ?
+            <a href="{{ url_for('auth.register') }}" style="color:var(--green);font-weight:700;">S'inscrire gratuitement</a>
+          </p>
+        </div>
+
+        <!-- Demo accounts -->
+        <div style="margin-top:16px;background:var(--surface);border-radius:8px;padding:14px;">
+          <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:10px;">COMPTES DE DÉMONSTRATION</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            {% for label, email, pw, color in [
+              ('👤 Citoyen',   'moussa@demo.com',            'demo123',      'green'),
+              ('📦 Collecteur','fatou@wastebank.africa',     'collector123', 'amber'),
+              ('⚙️ Admin',     'admin@wastebank.africa',     'admin123',     'coral')
+            ] %}
+            <button onclick="document.querySelector('[name=email]').value='{{ email }}';document.querySelector('[name=password]').value='{{ pw }}'"
+                    class="btn btn-outline btn-sm" style="justify-content:flex-start;border-color:var(--{{ color }});color:var(--{{ color }});">
+              {{ label }} — {{ email }}
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

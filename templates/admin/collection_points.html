@@ -1,0 +1,81 @@
+{% extends "dashboard/layout.html" %}
+{% block title %}Points de collecte{% endblock %}
+{% block page_title %}📍 Points de collecte{% endblock %}
+{% block content %}
+
+<div class="grid-2" style="margin-bottom:24px;">
+  <div class="card">
+    <div class="card-header"><span class="card-title">➕ Ajouter un point</span></div>
+    <div class="card-body">
+      <form method="POST">
+        <input type="hidden" name="action" value="add">
+        <div class="form-group"><label>Nom du point</label><input type="text" name="name" required placeholder="Ex: Point Collecte HLM"></div>
+        <div class="form-group"><label>Adresse</label><input type="text" name="address" required placeholder="Rue, quartier..."></div>
+        <div class="form-group">
+          <label>Ville</label>
+          <select name="city">
+            {% for c in ['Dakar','Thiès','Saint-Louis','Ziguinchor','Abidjan','Cotonou','Lomé','Bamako','Ouagadougou'] %}
+            <option>{{ c }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="grid-2" style="gap:10px;">
+          <div class="form-group"><label>Latitude</label><input type="number" name="lat" step="0.0001" placeholder="14.6928"></div>
+          <div class="form-group"><label>Longitude</label><input type="number" name="lng" step="0.0001" placeholder="-17.4467"></div>
+        </div>
+        <button type="submit" class="btn btn-primary">📍 Ajouter</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">🗺️ Répartition géographique</span></div>
+    <div class="card-body" style="padding:12px 0;">
+      {% set cities = points|groupby('city') %}
+      {% for city, cpoints in cities %}
+      <div style="padding:10px 20px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-weight:700;">{{ city }}</span>
+          <span class="mono text-green" style="font-size:12px;">{{ cpoints|list|length }} point(s)</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:{{ [(cpoints|list|length) / (points|length) * 100, 100]|min }}%;"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">{{ points|length }} point(s) de collecte</span>
+    <span class="badge badge-green">{{ points|selectattr('active')|list|length }} actifs</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Nom</th><th>Adresse</th><th>Ville</th><th>Coordonnées</th><th>Responsable</th><th>Statut</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for cp in points %}
+        <tr style="{% if not cp['active'] %}opacity:.4;{% endif %}">
+          <td style="font-weight:700;">📍 {{ cp['name'] }}</td>
+          <td style="font-size:12px;color:var(--muted);">{{ cp['address'] }}</td>
+          <td><span class="badge badge-purple">{{ cp['city'] }}</span></td>
+          <td class="mono" style="font-size:10px;color:var(--muted);">
+            {% if cp['lat'] %}{{ "%.4f"|format(cp['lat']) }}, {{ "%.4f"|format(cp['lng']) }}{% else %}—{% endif %}
+          </td>
+          <td style="font-size:12px;">{{ cp['manager_name'] or '—' }}</td>
+          <td>{% if cp['active'] %}<span class="badge badge-green">Actif</span>{% else %}<span class="badge badge-gray">Inactif</span>{% endif %}</td>
+          <td>
+            <form method="POST" style="display:inline;">
+              <input type="hidden" name="action" value="toggle">
+              <input type="hidden" name="cp_id" value="{{ cp['id'] }}">
+              <button type="submit" class="btn btn-outline btn-sm">{% if cp['active'] %}Désactiver{% else %}Activer{% endif %}</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

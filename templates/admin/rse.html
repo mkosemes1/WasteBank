@@ -1,0 +1,74 @@
+{% extends "dashboard/layout.html" %}
+{% block title %}Rapports RSE{% endblock %}
+{% block page_title %}📊 Rapports RSE / ESG{% endblock %}
+{% block content %}
+
+<div class="grid-2" style="margin-bottom:24px;">
+  <div class="card">
+    <div class="card-header"><span class="card-title">➕ Créer un rapport</span></div>
+    <div class="card-body">
+      <form method="POST">
+        <div class="form-group"><label>Nom de l'entreprise</label><input type="text" name="company" required placeholder="Société XYZ SA"></div>
+        <div class="form-group"><label>Email de contact</label><input type="email" name="email" required placeholder="contact@entreprise.com"></div>
+        <div class="grid-2" style="gap:10px;">
+          <div class="form-group"><label>Période — Début</label><input type="date" name="start" required></div>
+          <div class="form-group"><label>Période — Fin</label><input type="date" name="end" required></div>
+        </div>
+        <div class="form-group"><label>Prix facturé (FCFA)</label><input type="number" name="price" value="150000" step="1000"></div>
+        <button type="submit" class="btn btn-amber">📄 Générer le rapport</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><span class="card-title">💡 Qu'est-ce qu'un rapport RSE ?</span></div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:14px;">
+      <p style="font-size:13px;color:var(--muted);line-height:1.7;">Les entreprises achètent ces rapports pour certifier leur engagement environnemental dans leurs bilans ESG (Environmental, Social, Governance).</p>
+      {% for item in [
+        ('📦','Volume collecté','Quantité totale de déchets traités par ville et type'),
+        ('🗺️','Traçabilité','Origine, point de collecte, circuit de recyclage'),
+        ('💰','Impact économique','Revenus générés pour les communautés locales'),
+        ('🌱','Bilan carbone','Émissions CO₂ évitées grâce au recyclage')
+      ] %}
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <span style="font-size:20px;">{{ item[0] }}</span>
+        <div>
+          <div style="font-weight:700;font-size:13px;">{{ item[1] }}</div>
+          <div style="font-size:12px;color:var(--muted);">{{ item[2] }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">{{ reports|length }} rapport(s) RSE</span>
+    <span class="mono text-amber" style="font-size:12px;">
+      Total: {{ "%.0f"|format(reports|map(attribute='price_paid')|sum) }} FCFA
+    </span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Entreprise</th><th>Email</th><th>Période</th><th>Prix</th><th>Statut</th><th>Date création</th></tr></thead>
+      <tbody>
+        {% for r in reports %}
+        <tr>
+          <td style="font-weight:700;">{{ r['company_name'] }}</td>
+          <td style="font-size:12px;color:var(--muted);">{{ r['company_email'] }}</td>
+          <td class="mono" style="font-size:11px;">{{ r['period_start'] }} → {{ r['period_end'] }}</td>
+          <td class="mono text-amber" style="font-weight:700;">{{ "%.0f"|format(r['price_paid']) }} ₣</td>
+          <td>
+            {% if r['status']=='pending' %}<span class="badge badge-amber">⏳ En cours</span>
+            {% elif r['status']=='delivered' %}<span class="badge badge-green">✓ Livré</span>
+            {% else %}<span class="badge badge-gray">{{ r['status'] }}</span>{% endif %}
+          </td>
+          <td class="mono" style="font-size:10px;color:var(--muted);">{{ r['created_at'][:16] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

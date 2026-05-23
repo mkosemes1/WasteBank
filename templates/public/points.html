@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Points de collecte{% endblock %}
+{% block body %}
+<nav class="public-nav">
+  <a href="{{ url_for('public.index') }}" style="font-size:22px;font-weight:800;">
+    <span style="color:var(--green);">Waste</span><span style="color:var(--amber);">Bank</span>
+  </a>
+  <div style="display:flex;gap:8px;">
+    <a href="{{ url_for('public.index') }}" class="btn btn-outline btn-sm">← Accueil</a>
+    {% if current_user %}
+      <a href="{{ url_for('dash.home') }}" class="btn btn-primary btn-sm">Mon compte →</a>
+    {% else %}
+      <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">S'inscrire</a>
+    {% endif %}
+  </div>
+</nav>
+<div style="max-width:1000px;margin:60px auto;padding:0 24px;">
+  <div class="section-label">RÉSEAU</div>
+  <h1 style="font-size:clamp(32px,5vw,52px);font-weight:800;letter-spacing:-2px;margin-bottom:8px;">Points de collecte</h1>
+  <p style="color:var(--muted);margin-bottom:40px;">{{ points|length }} points actifs dans {{ points|map(attribute='city')|unique|list|length }} ville(s).</p>
+
+  {% set cities = points|groupby('city') %}
+  {% for city, cpoints in cities %}
+  <div style="margin-bottom:32px;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+      <span style="font-size:20px;">🏙️</span>
+      <h2 style="font-size:20px;font-weight:800;">{{ city }}</h2>
+      <span class="badge badge-green">{{ cpoints|list|length }} point(s)</span>
+    </div>
+    <div class="grid-3">
+      {% for cp in cpoints %}
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;transition:border-color .2s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size:15px;font-weight:800;margin-bottom:6px;">📍 {{ cp['name'] }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5;">{{ cp['address'] }}</div>
+        {% if cp['lat'] %}
+        <a href="https://maps.google.com/?q={{ cp['lat'] }},{{ cp['lng'] }}" target="_blank" class="btn btn-outline btn-sm" style="font-size:11px;">
+          🗺️ Voir sur la carte
+        </a>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

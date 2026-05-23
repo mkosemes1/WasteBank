@@ -1,0 +1,112 @@
+{% extends "dashboard/layout.html" %}
+{% block title %}Nouveau dépôt{% endblock %}
+{% block page_title %}Nouveau dépôt ♻️{% endblock %}
+
+{% block content %}
+<div style="max-width:680px;">
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📦 Enregistrer un dépôt de déchets</span>
+    </div>
+    <div class="card-body">
+      <form method="POST" id="depositForm">
+
+        <div class="form-group">
+          <label>Type de déchet</label>
+          <select name="waste_type_id" id="wasteSelect" required onchange="updatePrice()">
+            <option value="">-- Sélectionnez --</option>
+            {% for wt in waste_types %}
+            <option value="{{ wt['id'] }}" data-price="{{ wt['price_fcfa'] }}" data-unit="{{ wt['unit'] }}" data-icon="{{ wt['icon'] }}">
+              {{ wt['icon'] }} {{ wt['name'] }} — {{ "%.0f"|format(wt['price_fcfa']) }} FCFA/{{ wt['unit'] }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Live price display -->
+        <div id="priceBox" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:18px;">
+          <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:4px;">PRIX ACTUEL</div>
+          <div style="font-size:24px;font-weight:800;color:var(--green);" id="priceDisplay">—</div>
+        </div>
+
+        <div class="form-group">
+          <label>Poids (en kg)</label>
+          <input type="number" name="weight_kg" id="weightInput" placeholder="Ex: 5.5"
+                 step="0.1" min="0.1" required oninput="calcTotal()">
+        </div>
+
+        <!-- Total estimé -->
+        <div id="totalBox" style="display:none;background:rgba(29,158,117,.08);border:1px solid var(--green-dark);border-radius:8px;padding:16px;margin-bottom:18px;">
+          <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--green-light);letter-spacing:2px;margin-bottom:4px;">MONTANT ESTIMÉ</div>
+          <div style="font-size:36px;font-weight:800;color:var(--white);" id="totalDisplay">0</div>
+          <div style="font-size:12px;color:var(--green-light);font-family:'Space Mono',monospace;">FCFA · versement en < 10 secondes</div>
+        </div>
+
+        <div class="form-group">
+          <label>Point de collecte</label>
+          <select name="point_id" required>
+            <option value="">-- Sélectionnez un point --</option>
+            {% for cp in collection_points %}
+            <option value="{{ cp['id'] }}">📍 {{ cp['name'] }} — {{ cp['city'] }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-top:8px;">
+          <button type="submit" class="btn btn-primary btn-lg" style="flex:1;">
+            ✓ Enregistrer le dépôt
+          </button>
+          <a href="{{ url_for('dash.home') }}" class="btn btn-outline btn-lg">Annuler</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- INFO CARD -->
+  <div class="card mt-3">
+    <div class="card-header"><span class="card-title">ℹ️ Comment ça marche ?</span></div>
+    <div class="card-body">
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        {% for step, title, desc in [
+          ('01','Remplissez le formulaire','Sélectionnez le type, le poids et le point de collecte.'),
+          ('02','Obtenez votre QR code','Un code unique est généré pour votre dépôt.'),
+          ('03','Déposez vos déchets','Rendez-vous au point de collecte avec vos déchets.'),
+          ('04','Recevez votre paiement','Après validation, le montant est crédité sur votre portefeuille.')
+        ] %}
+        <div style="display:flex;gap:14px;align-items:flex-start;">
+          <div style="width:32px;height:32px;border-radius:50%;background:var(--green-dark);color:var(--green-light);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:11px;flex-shrink:0;">{{ step }}</div>
+          <div>
+            <div style="font-weight:700;margin-bottom:2px;">{{ title }}</div>
+            <div style="font-size:13px;color:var(--muted);">{{ desc }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function updatePrice() {
+  const sel = document.getElementById('wasteSelect');
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt.value) { document.getElementById('priceBox').style.display='none'; return; }
+  const price = opt.dataset.price;
+  const unit  = opt.dataset.unit;
+  document.getElementById('priceDisplay').textContent = parseFloat(price).toLocaleString('fr-FR') + ' FCFA / ' + unit;
+  document.getElementById('priceBox').style.display = 'block';
+  calcTotal();
+}
+function calcTotal() {
+  const sel    = document.getElementById('wasteSelect');
+  const weight = parseFloat(document.getElementById('weightInput').value) || 0;
+  if (!sel.value || weight <= 0) { document.getElementById('totalBox').style.display='none'; return; }
+  const price = parseFloat(sel.options[sel.selectedIndex].dataset.price);
+  const total = price * weight;
+  document.getElementById('totalDisplay').textContent = total.toLocaleString('fr-FR');
+  document.getElementById('totalBox').style.display = 'block';
+}
+</script>
+{% endblock %}

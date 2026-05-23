@@ -1,0 +1,153 @@
+{% extends "dashboard/layout.html" %}
+{% block title %}Admin — Tableau de bord{% endblock %}
+{% block page_title %}⚙️ Administration{% endblock %}
+{% block content %}
+
+<div class="stats-grid">
+  <div class="stat-card green">
+    <div class="stat-label">Citoyens inscrits</div>
+    <div class="stat-value green">{{ stats['citizens'] }}</div>
+    <div class="stat-sub">utilisateurs actifs</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-label">Total collecté</div>
+    <div class="stat-value amber">{{ "%.1f"|format(stats['total_kg'] or 0) }}</div>
+    <div class="stat-sub">kilogrammes</div>
+  </div>
+  <div class="stat-card coral">
+    <div class="stat-label">FCFA distribués</div>
+    <div class="stat-value coral">{{ "%.0f"|format((stats['total_paid'] or 0)/1000) }}K</div>
+    <div class="stat-sub">payés aux citoyens</div>
+  </div>
+  <div class="stat-card purple">
+    <div class="stat-label">En attente</div>
+    <div class="stat-value purple">{{ stats['pending'] }}</div>
+    <div class="stat-sub">dépôts à traiter</div>
+  </div>
+</div>
+
+<div class="grid-2" style="margin-bottom:24px;">
+  <!-- Monthly Chart -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">📈 Activité mensuelle</span></div>
+    <div class="card-body"><canvas id="adminChart" height="200"></canvas></div>
+  </div>
+
+  <!-- Waste breakdown -->
+  <div class="card">
+    <div class="card-header"><span class="card-title">♻️ Répartition par type</span></div>
+    <div class="card-body" style="padding:12px 0;">
+      {% for wt in waste_breakdown %}
+      <div style="padding:8px 20px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+          <span>{{ wt['icon'] }} {{ wt['name'] }}</span>
+          <span class="mono" style="font-size:12px;color:var(--muted);">{{ "%.1f"|format(wt['total_kg'] or 0) }} kg</span>
+        </div>
+        {% set max_kg = waste_breakdown[0]['total_kg'] or 1 %}
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:{{ [(wt['total_kg'] or 0) / max_kg * 100, 100]|min }}%;background:#{{ wt['color_hex'] }};"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="grid-2" style="margin-bottom:24px;">
+  <!-- Top users -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">🏆 Top citoyens</span>
+      <a href="{{ url_for('admin.users') }}" style="font-size:12px;color:var(--muted);">Voir tous →</a>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Citoyen</th><th>Dépôts</th><th>Kg</th><th>Gagné</th></tr></thead>
+        <tbody>
+          {% for u in top_users %}
+          <tr>
+            <td style="font-weight:800;">
+              {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}{{ loop.index }}{% endif %}
+            </td>
+            <td><div style="font-weight:700;">{{ u['name'] }}</div><div style="font-size:11px;color:var(--muted);">{{ u['city'] }}</div></td>
+            <td class="mono">{{ u['deposits'] }}</td>
+            <td class="mono">{{ "%.1f"|format(u['kg'] or 0) }}</td>
+            <td class="mono text-green">{{ "%.0f"|format(u['earned'] or 0) }} ₣</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Recent deposits -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📋 Dépôts récents</span>
+      <a href="{{ url_for('admin.deposits') }}" style="font-size:12px;color:var(--muted);">Voir tous →</a>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Citoyen</th><th>Type</th><th>Montant</th><th>Statut</th></tr></thead>
+        <tbody>
+          {% for d in recent_deposits[:8] %}
+          <tr>
+            <td style="font-size:12px;">{{ d['user_name'] }}</td>
+            <td><span class="waste-dot"><span class="dot" style="background:#{{ d['color_hex'] }}"></span>{{ d['waste_name'] }}</span></td>
+            <td class="mono text-amber" style="font-size:12px;">{{ "%.0f"|format(d['total_fcfa']) }} ₣</td>
+            <td>
+              {% if d['status']=='paid' %}<span class="badge badge-green">Payé</span>
+              {% elif d['status']=='pending' %}<span class="badge badge-amber">Attente</span>
+              {% else %}<span class="badge badge-coral">{{ d['status'] }}</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Quick links -->
+<div class="grid-4">
+  {% for icon, label, url in [
+    ('👥','Gérer utilisateurs', url_for('admin.users')),
+    ('♻️','Types de déchets',   url_for('admin.waste_types')),
+    ('📍','Points de collecte', url_for('admin.collection_points')),
+    ('📊','Rapports RSE',       url_for('admin.rse'))
+  ] %}
+  <a href="{{ url }}" class="card" style="padding:20px;text-align:center;text-decoration:none;transition:border-color .2s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'">
+    <div style="font-size:28px;margin-bottom:8px;">{{ icon }}</div>
+    <div style="font-size:13px;font-weight:700;color:var(--text);">{{ label }}</div>
+  </a>
+  {% endfor %}
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const months = {{ monthly|map(attribute='month')|list|tojson }};
+const counts = {{ monthly|map(attribute='count')|list|tojson }};
+const kgs    = {{ monthly|map(attribute='kg')|list|tojson }};
+new Chart(document.getElementById('adminChart'), {
+  type: 'line',
+  data: {
+    labels: months,
+    datasets: [
+      { label:'Dépôts', data: counts, borderColor:'#1D9E75', backgroundColor:'rgba(29,158,117,.1)', tension:.4, fill:true, yAxisID:'y' },
+      { label:'Kg', data: kgs, borderColor:'#EF9F27', backgroundColor:'rgba(239,159,39,.05)', tension:.4, fill:true, yAxisID:'y1' },
+    ]
+  },
+  options: {
+    responsive:true,
+    plugins:{ legend:{ labels:{ color:'#888780', font:{ family:'Space Mono', size:10 } } } },
+    scales: {
+      x:  { ticks:{ color:'#888780' }, grid:{ color:'#2A2A28' } },
+      y:  { ticks:{ color:'#1D9E75' }, grid:{ color:'#2A2A28' }, position:'left' },
+      y1: { ticks:{ color:'#EF9F27' }, grid:{ display:false },  position:'right' },
+    }
+  }
+});
+</script>
+{% endblock %}

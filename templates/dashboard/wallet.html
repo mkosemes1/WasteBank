@@ -1,0 +1,65 @@
+{% extends "dashboard/layout.html" %}
+{% block title %}Portefeuille{% endblock %}
+{% block page_title %}💰 Mon portefeuille{% endblock %}
+{% block content %}
+<div class="grid-2" style="margin-bottom:24px;">
+  <div class="balance-card">
+    <div class="balance-label">SOLDE DISPONIBLE</div>
+    <div class="balance-amount">{{ "%.0f"|format(user['balance']) }}<span class="balance-unit"> FCFA</span></div>
+    <div style="margin-top:20px;">
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--green-light);margin-bottom:12px;">RETIRER VERS :</div>
+      <form method="POST" action="{{ url_for('dash.withdraw') }}" style="display:flex;flex-direction:column;gap:10px;">
+        <select name="method" style="background:rgba(0,0,0,.3);border-color:var(--green-dark);color:var(--text);">
+          <option value="wave">📱 Wave</option>
+          <option value="orange_money">🟠 Orange Money</option>
+        </select>
+        <input type="tel" name="phone" placeholder="Numéro mobile money" required style="background:rgba(0,0,0,.3);border-color:var(--green-dark);color:var(--text);">
+        <div style="display:flex;gap:8px;">
+          <input type="number" name="amount" placeholder="Montant (min 500)" min="500" step="100" required style="flex:1;background:rgba(0,0,0,.3);border-color:var(--green-dark);color:var(--text);">
+          <button type="submit" class="btn btn-primary">Retirer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><span class="card-title">📊 Résumé</span></div>
+    <div class="card-body" style="display:flex;flex-direction:column;gap:14px;">
+      {% set total_in = transactions|selectattr('type','equalto','credit')|map(attribute='amount')|sum %}
+      {% set total_out = transactions|selectattr('type','equalto','withdrawal')|map(attribute='amount')|sum|abs %}
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--surface);border-radius:8px;">
+        <span>💚 Total reçu</span><span class="mono text-green">{{ "%.0f"|format(total_in) }} FCFA</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--surface);border-radius:8px;">
+        <span>📤 Total retiré</span><span class="mono text-amber">{{ "%.0f"|format(total_out) }} FCFA</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:rgba(29,158,117,.08);border:1px solid var(--green-dark);border-radius:8px;">
+        <span>💰 Solde actuel</span><span class="mono text-green" style="font-size:18px;font-weight:800;">{{ "%.0f"|format(user['balance']) }} FCFA</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><span class="card-title">🧾 Historique des transactions</span></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Date</th><th>Description</th><th>Méthode</th><th>Montant</th><th>Statut</th></tr></thead>
+      <tbody>
+        {% for t in transactions %}
+        <tr>
+          <td class="mono" style="font-size:11px;color:var(--muted);">{{ t['created_at'][:16] }}</td>
+          <td>{{ t['description'] or '—' }}</td>
+          <td><span class="badge badge-gray">{{ t['method'] }}</span></td>
+          <td class="mono {% if t['amount'] > 0 %}text-green{% else %}text-coral{% endif %}" style="font-weight:700;">
+            {% if t['amount'] > 0 %}+{% endif %}{{ "%.0f"|format(t['amount']) }} ₣
+          </td>
+          <td><span class="badge badge-green">{{ t['status'] }}</span></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px;">Aucune transaction pour l'instant.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

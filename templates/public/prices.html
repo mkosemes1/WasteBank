@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Prix du jour{% endblock %}
+{% block body %}
+<nav class="public-nav">
+  <a href="{{ url_for('public.index') }}" style="font-size:22px;font-weight:800;">
+    <span style="color:var(--green);">Waste</span><span style="color:var(--amber);">Bank</span>
+  </a>
+  <div style="display:flex;gap:8px;">
+    <a href="{{ url_for('public.index') }}" class="btn btn-outline btn-sm">← Accueil</a>
+    {% if current_user %}
+      <a href="{{ url_for('dash.home') }}" class="btn btn-primary btn-sm">Mon compte →</a>
+    {% else %}
+      <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">S'inscrire</a>
+    {% endif %}
+  </div>
+</nav>
+
+<div style="max-width:900px;margin:60px auto;padding:0 24px;">
+  <div class="section-label">TARIFS EN TEMPS RÉEL</div>
+  <h1 style="font-size:clamp(32px,5vw,52px);font-weight:800;letter-spacing:-2px;margin-bottom:8px;">Prix du jour</h1>
+  <p style="color:var(--muted);margin-bottom:40px;">Mis à jour quotidiennement selon les cours du marché du recyclage.</p>
+
+  <div class="grid-2" style="gap:16px;margin-bottom:40px;">
+    {% for wt in waste_types %}
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;display:flex;gap:16px;align-items:center;border-left:4px solid #{{ wt['color_hex'] }};">
+      <div style="font-size:40px;">{{ wt['icon'] }}</div>
+      <div style="flex:1;">
+        <div style="font-size:16px;font-weight:800;margin-bottom:4px;">{{ wt['name'] }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">{{ wt['description'] or '' }}</div>
+        <div style="font-size:28px;font-weight:800;color:#{{ wt['color_hex'] }};">
+          {{ "%.0f"|format(wt['price_fcfa']) }} <span style="font-size:13px;font-weight:400;color:var(--muted);">FCFA / {{ wt['unit'] }}</span>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Simulator -->
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:32px;">
+    <h2 style="font-size:22px;font-weight:800;margin-bottom:20px;">🧮 Simulateur de revenus</h2>
+    <div class="grid-2" style="gap:16px;margin-bottom:20px;">
+      <div class="form-group">
+        <label>Type de déchet</label>
+        <select id="calcType" onchange="calculate()">
+          {% for wt in waste_types %}
+          <option value="{{ wt['price_fcfa'] }}">{{ wt['icon'] }} {{ wt['name'] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Poids estimé (kg)</label>
+        <input type="number" id="calcWeight" value="5" step="0.5" min="0.5" oninput="calculate()">
+      </div>
+    </div>
+    <div style="background:rgba(29,158,117,.08);border:1px solid var(--green-dark);border-radius:12px;padding:24px;text-align:center;">
+      <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--green-light);letter-spacing:3px;margin-bottom:8px;">VOUS RECEVREZ</div>
+      <div id="calcResult" style="font-size:48px;font-weight:800;color:var(--white);">600</div>
+      <div style="font-family:'Space Mono',monospace;font-size:13px;color:var(--green-light);">FCFA · versement instantané sur votre mobile money</div>
+    </div>
+    <div style="text-align:center;margin-top:20px;">
+      <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">♻️ Commencer à gagner</a>
+    </div>
+  </div>
+</div>
+<script>
+function calculate() {
+  const price  = parseFloat(document.getElementById('calcType').value);
+  const weight = parseFloat(document.getElementById('calcWeight').value) || 0;
+  document.getElementById('calcResult').textContent = (price * weight).toLocaleString('fr-FR');
+}
+</script>
+{% endblock %}

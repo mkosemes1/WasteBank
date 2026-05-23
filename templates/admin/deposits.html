@@ -1,0 +1,81 @@
+{% extends "dashboard/layout.html" %}
+{% block title %}Tous les dépôts{% endblock %}
+{% block page_title %}📋 Gestion des dépôts{% endblock %}
+{% block content %}
+
+<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+  <form method="GET" style="display:flex;gap:8px;flex-wrap:wrap;">
+    <select name="status">
+      <option value="">Tous les statuts</option>
+      {% for st in ['pending','validated','paid','rejected'] %}
+      <option value="{{ st }}" {% if status_filter==st %}selected{% endif %}>{{ st }}</option>
+      {% endfor %}
+    </select>
+    <select name="city">
+      <option value="">Toutes les villes</option>
+      {% for c in cities %}
+      <option value="{{ c['city'] }}" {% if city_filter==c['city'] %}selected{% endif %}>{{ c['city'] }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm">🔍 Filtrer</button>
+    <a href="{{ url_for('admin.deposits') }}" class="btn btn-outline btn-sm">✕ Réinitialiser</a>
+  </form>
+</div>
+
+<!-- Summary bar -->
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">
+  {% set paid_deps = deposits|selectattr('status','equalto','paid')|list %}
+  {% set pend_deps = deposits|selectattr('status','equalto','pending')|list %}
+  <div class="stat-card green" style="padding:14px 18px;">
+    <div class="stat-label">Payés</div>
+    <div class="stat-value green" style="font-size:24px;">{{ paid_deps|length }}</div>
+  </div>
+  <div class="stat-card amber" style="padding:14px 18px;">
+    <div class="stat-label">En attente</div>
+    <div class="stat-value amber" style="font-size:24px;">{{ pend_deps|length }}</div>
+  </div>
+  <div class="stat-card coral" style="padding:14px 18px;">
+    <div class="stat-label">Total kg</div>
+    <div class="stat-value coral" style="font-size:24px;">{{ "%.1f"|format(deposits|map(attribute='weight_kg')|sum) }}</div>
+  </div>
+  <div class="stat-card purple" style="padding:14px 18px;">
+    <div class="stat-label">Total FCFA</div>
+    <div class="stat-value purple" style="font-size:24px;">{{ "%.0f"|format(paid_deps|map(attribute='total_fcfa')|sum / 1000) }}K</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <span class="card-title">{{ deposits|length }} dépôt(s)</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Réf</th><th>Citoyen</th><th>Type</th><th>Poids</th><th>Montant</th><th>Point</th><th>Date</th><th>Statut</th></tr></thead>
+      <tbody>
+        {% for d in deposits %}
+        <tr>
+          <td class="mono" style="font-size:10px;color:var(--muted);">{{ d['qr_code'] }}</td>
+          <td style="font-size:12px;font-weight:600;">{{ d['user_name'] }}</td>
+          <td>
+            <div class="waste-dot">
+              <span class="dot" style="background:#{{ d['color_hex'] }}"></span>
+              {{ d['icon'] }} {{ d['waste_name'] }}
+            </div>
+          </td>
+          <td class="mono" style="font-size:12px;">{{ d['weight_kg'] }} kg</td>
+          <td class="mono text-amber" style="font-size:12px;font-weight:700;">{{ "%.0f"|format(d['total_fcfa']) }} ₣</td>
+          <td style="font-size:11px;color:var(--muted);">{{ d['point_name'] }}<br><span style="color:var(--green);">{{ d['city'] }}</span></td>
+          <td class="mono" style="font-size:10px;color:var(--muted);">{{ d['created_at'][:16] }}</td>
+          <td>
+            {% if d['status']=='paid' %}<span class="badge badge-green">✓ Payé</span>
+            {% elif d['status']=='pending' %}<span class="badge badge-amber">⏳ Attente</span>
+            {% elif d['status']=='validated' %}<span class="badge badge-purple">✓ Validé</span>
+            {% else %}<span class="badge badge-coral">✗ Refusé</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
