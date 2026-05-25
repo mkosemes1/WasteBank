@@ -1,58 +1,51 @@
 {% extends "base.html" %}
-{% block title %}Connexion{% endblock %}
+{% block title %}Connexion — WasteBank{% endblock %}
 {% block body %}
-<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:20px;">
-  <div style="width:100%;max-width:420px;">
-
-    <!-- Logo -->
-    <div style="text-align:center;margin-bottom:40px;">
-      <a href="{{ url_for('public.index') }}" style="font-size:36px;font-weight:800;letter-spacing:-1px;">
-        <span style="color:var(--green);">Waste</span><span style="color:var(--amber);">Bank</span>
+<style>
+@media(max-width:768px){.auth-split{grid-template-columns:1fr!important;}.auth-left{display:none!important;}}
+</style>
+<div class="auth-split" style="min-height:100vh;display:grid;grid-template-columns:1fr 1fr;">
+  <div class="auth-left" style="background:var(--void);border-right:1px solid var(--border);display:flex;flex-direction:column;justify-content:space-between;padding:48px;position:relative;overflow:hidden;">
+    <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:.04;" viewBox="0 0 400 600" preserveAspectRatio="xMidYMid slice">
+      <circle cx="350" cy="60"  r="200" fill="none" stroke="#C87941" stroke-width="50"/>
+      <circle cx="50"  cy="400" r="240" fill="none" stroke="#C87941" stroke-width="50"/>
+      <circle cx="300" cy="560" r="160" fill="none" stroke="#C87941" stroke-width="50"/>
+    </svg>
+    <div style="position:relative;z-index:2;">
+      <a href="{{ url_for('public.index') }}" style="display:inline-flex;align-items:center;gap:10px;text-decoration:none;">
+        <div style="width:36px;height:36px;background:linear-gradient(135deg,var(--copper-dk),var(--copper));border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:18px;">♻</div>
+        <span style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--ivory);">WasteBank</span>
       </a>
-      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:3px;margin-top:4px;">PLATEFORME CITOYENNE</div>
     </div>
-
-    <div class="card">
-      <div class="card-header" style="justify-content:center;">
-        <span class="card-title" style="font-size:18px;">Connexion à votre compte</span>
+    <div style="position:relative;z-index:2;">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:46px;font-weight:700;color:var(--ivory);line-height:1.05;margin-bottom:20px;letter-spacing:-.5px;">
+        Chaque déchet<br>est une<br><em style="color:var(--copper-lt);">opportunité.</em>
       </div>
-      <div class="card-body">
-        <form method="POST">
-          <div class="form-group">
-            <label>Adresse email</label>
-            <input type="email" name="email" required autofocus placeholder="votre@email.com">
-          </div>
-          <div class="form-group">
-            <label>Mot de passe</label>
-            <input type="password" name="password" required placeholder="••••••••">
-          </div>
-          <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:8px;">
-            → Se connecter
-          </button>
-        </form>
-
-        <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);text-align:center;">
-          <p style="font-size:13px;color:var(--muted);">Pas encore de compte ?
-            <a href="{{ url_for('auth.register') }}" style="color:var(--green);font-weight:700;">S'inscrire gratuitement</a>
-          </p>
-        </div>
-
-        <!-- Demo accounts -->
-        <div style="margin-top:16px;background:var(--surface);border-radius:8px;padding:14px;">
-          <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-bottom:10px;">COMPTES DE DÉMONSTRATION</div>
-          <div style="display:flex;flex-direction:column;gap:6px;">
-            {% for label, email, pw, color in [
-              ('👤 Citoyen',   'moussa@demo.com',            'demo123',      'green'),
-              ('📦 Collecteur','fatou@wastebank.africa',     'collector123', 'amber'),
-              ('⚙️ Admin',     'admin@wastebank.africa',     'admin123',     'coral')
-            ] %}
-            <button onclick="document.querySelector('[name=email]').value='{{ email }}';document.querySelector('[name=password]').value='{{ pw }}'"
-                    class="btn btn-outline btn-sm" style="justify-content:flex-start;border-color:var(--{{ color }});color:var(--{{ color }});">
-              {{ label }} — {{ email }}
-            </button>
-            {% endfor %}
-          </div>
-        </div>
+      <p style="font-size:14px;color:var(--muted);line-height:1.7;max-width:340px;">
+        La plateforme fintech africaine qui transforme les déchets en revenus immédiats via mobile money.
+      </p>
+    </div>
+    <div style="position:relative;z-index:2;display:flex;gap:36px;padding-top:24px;border-top:1px solid var(--border);">
+      {% for v,l in [('12M','Citoyens ciblés'),('91%','Plastique non recyclé'),('<10s','Paiement')] %}
+      <div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--copper-lt);">{{v}}</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--dim);letter-spacing:1.5px;margin-top:2px;">{{l}}</div>
+      </div>{% endfor %}
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:center;padding:48px;background:var(--obsidian);">
+    <div style="width:100%;max-width:380px;">
+      <div style="margin-bottom:32px;">
+        <h2 style="font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:700;color:var(--ivory);margin-bottom:6px;">Connexion</h2>
+        <p style="color:var(--muted);font-size:13px;">Accédez à votre espace WasteBank</p>
+      </div>
+      <form method="POST">
+        <div class="fg"><label>Email</label><input type="email" name="email" required autofocus placeholder="vous@email.com"></div>
+        <div class="fg"><label>Mot de passe</label><input type="password" name="password" required placeholder="••••••••"></div>
+        <button type="submit" class="btn btn-copper btn-lg" style="width:100%;justify-content:center;margin-top:4px;">Connexion →</button>
+      </form>
+      <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);text-align:center;">
+        <p style="font-size:12.5px;color:var(--muted);">Pas de compte ? <a href="{{ url_for('auth.register') }}" style="color:var(--copper-lt);font-weight:600;">Créer un compte</a></p>
       </div>
     </div>
   </div>

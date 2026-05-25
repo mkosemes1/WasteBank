@@ -1,150 +1,113 @@
 {% extends "base.html" %}
 {% block title %}WasteBank — Transforme tes déchets en revenus{% endblock %}
 {% block body %}
-
-<!-- NAV -->
-<nav class="public-nav">
-  <a href="{{ url_for('public.index') }}" style="font-size:22px;font-weight:800;letter-spacing:-1px;">
-    <span style="color:var(--green);">Waste</span><span style="color:var(--amber);">Bank</span>
+<nav class="pub-nav">
+  <a href="{{ url_for('public.index') }}" style="display:flex;align-items:center;gap:9px;">
+    <div style="width:32px;height:32px;background:linear-gradient(135deg,var(--copper-dk),var(--copper));border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:16px;">♻</div>
+    <span style="font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;color:var(--ivory);">WasteBank</span>
   </a>
-  <div style="display:flex;align-items:center;gap:8px;">
-    <a href="{{ url_for('public.prices') }}" class="btn btn-outline btn-sm">💲 Prix</a>
-    <a href="{{ url_for('public.points_map') }}" class="btn btn-outline btn-sm">📍 Points</a>
-    <a href="{{ url_for('public.how_it_works') }}" class="btn btn-outline btn-sm">❓ Comment ça marche</a>
+  <div style="display:flex;align-items:center;gap:7px;">
+    <a href="{{ url_for('public.prices') }}" style="font-size:12.5px;color:var(--muted);padding:5px 10px;">Prix</a>
+    <a href="{{ url_for('public.points_map') }}" style="font-size:12.5px;color:var(--muted);padding:5px 10px;">Points</a>
+    <a href="{{ url_for('public.how_it_works') }}" style="font-size:12.5px;color:var(--muted);padding:5px 10px;">Guide</a>
     {% if current_user %}
-      <a href="{{ url_for('dash.home') }}" class="btn btn-primary btn-sm">Mon tableau de bord →</a>
+    <a href="{{ url_for('dash.home') }}" class="btn btn-copper btn-sm">Mon espace →</a>
     {% else %}
-      <a href="{{ url_for('auth.login') }}" class="btn btn-outline btn-sm">Connexion</a>
-      <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">S'inscrire</a>
+    <a href="{{ url_for('auth.login') }}" style="font-size:12.5px;color:var(--ivory2);padding:5px 12px;font-weight:500;">Connexion</a>
+    <a href="{{ url_for('auth.register') }}" class="btn btn-copper btn-sm">S'inscrire</a>
     {% endif %}
   </div>
 </nav>
 
-<!-- HERO -->
-<section class="hero-section">
-  <div class="hero-bg"></div>
-  <div style="position:relative;z-index:2;max-width:700px;">
-    <div class="hero-tag">🌍 PLATEFORME BÊTA · DAKAR & ABIDJAN</div>
-    <h1 class="hero-title">
-      Tes déchets<br>valent de <span class="a">l'or.</span>
-    </h1>
-    <p class="hero-sub">
-      WasteBank transforme chaque kilo de plastique, aluminium ou papier en revenus immédiats versés sur ton mobile money. Sans banque. Sans paperasse.
-    </p>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;">
-      <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">♻️ Commencer gratuitement</a>
-      <a href="{{ url_for('public.how_it_works') }}" class="btn btn-outline btn-lg">Voir comment ça marche →</a>
-    </div>
-  </div>
-</section>
-
-<!-- LIVE STATS TICKER -->
-<div style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:16px 60px;overflow:hidden;">
-  <div style="display:flex;gap:60px;align-items:center;justify-content:center;flex-wrap:wrap;">
-    {% for icon, val, label in [
-      ('👥', stats['citizens'],                  'citoyens inscrits'),
-      ('♻️', "%.1f"|format(stats['kg_collected']), 'kg collectés'),
-      ('💰', "%.0f"|format(stats['fcfa_paid']),  'FCFA distribués'),
-      ('📍', stats['points'],                     'points de collecte')
-    ] %}
-    <div style="text-align:center;">
-      <div style="font-size:24px;font-weight:800;color:var(--green);">{{ icon }} {{ val }}</div>
-      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-top:2px;">{{ label|upper }}</div>
-    </div>
-    {% endfor %}
-  </div>
-</div>
-
-<!-- HOW IT WORKS -->
-<section class="section" style="background:var(--bg2);">
-  <div style="max-width:1100px;margin:0 auto;">
-    <div class="section-label">PROCESSUS</div>
-    <h2 class="section-title">Simple comme bonjour.</h2>
-    <div class="grid-4">
-      {% for num, icon, title, desc in [
-        ('01','📱','Inscris-toi',           'Crée ton compte en 2 minutes avec ton numéro mobile money.'),
-        ('02','📷','Scanne tes déchets',   'Prends en photo et enregistre tes déchets triés via l\'app.'),
-        ('03','📍','Va au point de collecte','Dépose tes déchets au point le plus proche de chez toi.'),
-        ('04','💰','Reçois ton argent',     'Paiement instantané sur Wave ou Orange Money, en < 10 secondes.')
-      ] %}
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;position:relative;">
-        <div style="font-family:'Space Mono',monospace;font-size:10px;color:var(--green);margin-bottom:12px;letter-spacing:2px;">{{ num }}</div>
-        <div style="font-size:32px;margin-bottom:12px;">{{ icon }}</div>
-        <div style="font-size:15px;font-weight:800;margin-bottom:8px;">{{ title }}</div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.6;">{{ desc }}</div>
+<section style="min-height:calc(100vh - 58px);display:grid;grid-template-columns:1fr 1fr;background:var(--obsidian);">
+  <div style="display:flex;flex-direction:column;justify-content:center;padding:72px 52px;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:-100px;left:-100px;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(200,121,65,.06) 0%,transparent 70%);pointer-events:none;"></div>
+    <div style="position:relative;z-index:2;">
+      <div style="display:inline-flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border);padding:4px 12px;border-radius:2px;margin-bottom:22px;">
+        <span style="width:5px;height:5px;background:var(--copper);border-radius:50%;display:inline-block;animation:p 2s infinite;"></span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--muted);letter-spacing:2px;">DAKAR · ABIDJAN · COTONOU</span>
       </div>
-      {% endfor %}
+      <h1 style="font-family:'Cormorant Garamond',serif;font-size:clamp(46px,6vw,72px);font-weight:700;line-height:1;letter-spacing:-.5px;margin-bottom:18px;color:var(--ivory);">
+        Tes déchets<br>valent de<br><em style="color:var(--copper-lt);">l'or.</em>
+      </h1>
+      <p style="font-size:15px;color:var(--muted);line-height:1.7;max-width:400px;margin-bottom:32px;">
+        WasteBank transforme chaque kilo de plastique ou aluminium en revenus immédiats sur ton mobile money. Sans banque. Sans paperasse.
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <a href="{{ url_for('auth.register') }}" class="btn btn-copper btn-xl">Commencer gratuitement</a>
+        <a href="{{ url_for('public.how_it_works') }}" class="btn btn-ghost btn-xl">Comment ça marche →</a>
+      </div>
+      <div style="display:flex;gap:32px;margin-top:44px;padding-top:32px;border-top:1px solid var(--border);">
+        {% for v,l in [('12M','Personnes ciblées'),('50K t','Plastique/an'),('<10s','Paiement')] %}
+        <div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:var(--copper-lt);">{{v}}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--dim);letter-spacing:1.5px;margin-top:2px;">{{l}}</div>
+        </div>{% endfor %}
+      </div>
     </div>
   </div>
-</section>
-
-<!-- PRICES -->
-<section class="section">
-  <div style="max-width:1100px;margin:0 auto;">
-    <div class="section-label">TARIFS</div>
-    <h2 class="section-title">Prix du jour.</h2>
-    <div class="grid-3" style="margin-bottom:24px;">
+  <div style="background:var(--void);border-left:1px solid var(--border);display:flex;flex-direction:column;justify-content:center;padding:52px 44px;position:relative;overflow:hidden;">
+    <svg style="position:absolute;inset:0;width:100%;height:100%;opacity:.03;" viewBox="0 0 400 600" preserveAspectRatio="xMidYMid slice">
+      <circle cx="350" cy="100" r="180" fill="none" stroke="#C87941" stroke-width="60"/>
+      <circle cx="50"  cy="500" r="220" fill="none" stroke="#C87941" stroke-width="60"/>
+    </svg>
+    <div style="position:relative;z-index:2;">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--dim);letter-spacing:2.5px;margin-bottom:18px;">PRIX EN TEMPS RÉEL</div>
       {% for wt in waste_types %}
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;border-top:3px solid #{{ wt['color_hex'] }};">
-        <div style="font-size:36px;margin-bottom:8px;">{{ wt['icon'] }}</div>
-        <div style="font-size:16px;font-weight:800;margin-bottom:4px;">{{ wt['name'] }}</div>
-        <div style="font-size:28px;font-weight:800;color:#{{ wt['color_hex'] }};margin-bottom:8px;">
-          {{ "%.0f"|format(wt['price_fcfa']) }} <span style="font-size:13px;color:var(--muted);">FCFA/{{ wt['unit'] }}</span>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:9px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:#{{wt['color_hex']}};flex-shrink:0;"></div>
+          <span style="font-size:13px;color:var(--ivory2);">{{wt['icon']}} {{wt['name']}}</span>
         </div>
-        <div style="font-size:12px;color:var(--muted);">{{ wt['description'] or '' }}</div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#{{wt['color_hex']}};font-weight:500;">{{ "%.0f"|format(wt['price_fcfa']) }} ₣/kg</span>
+      </div>{% endfor %}
+      <div style="margin-top:24px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--dim);letter-spacing:2px;margin-bottom:10px;">STATS PLATEFORME</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          {% for v,l in [(stats['citizens'],'citoyens'),(stats['points'],'points collecte'),("%.0f"|format(stats['kg_collected']),'kg collectés'),("%.0f"|format(stats['fcfa_paid']),'FCFA distribués')] %}
+          <div>
+            <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:700;color:var(--copper-lt);">{{v}}</div>
+            <div style="font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace;">{{l}}</div>
+          </div>{% endfor %}
+        </div>
       </div>
-      {% endfor %}
-    </div>
-    <div style="text-align:center;">
-      <a href="{{ url_for('public.prices') }}" class="btn btn-outline">Voir tous les prix →</a>
     </div>
   </div>
 </section>
 
-<!-- COLLECTION POINTS -->
-<section class="section" style="background:var(--bg2);">
+<section style="padding:72px 52px;background:var(--void);border-top:1px solid var(--border);">
   <div style="max-width:1100px;margin:0 auto;">
-    <div class="section-label">RÉSEAU</div>
-    <h2 class="section-title">Points de collecte proches.</h2>
-    <div class="grid-3">
-      {% for cp in points[:6] %}
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;">
-        <div style="font-size:13px;font-weight:800;margin-bottom:4px;">📍 {{ cp['name'] }}</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">{{ cp['address'] }}</div>
-        <span class="badge badge-green">{{ cp['city'] }}</span>
-      </div>
-      {% endfor %}
-    </div>
-    <div style="text-align:center;margin-top:24px;">
-      <a href="{{ url_for('public.points_map') }}" class="btn btn-outline">Voir tous les points →</a>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--muted);letter-spacing:2.5px;margin-bottom:10px;">PROCESSUS</div>
+    <h2 style="font-family:'Cormorant Garamond',serif;font-size:40px;font-weight:700;letter-spacing:-.5px;margin-bottom:44px;color:var(--ivory);">Simple. Rapide. Payant.</h2>
+    <div class="g4">
+      {% for n,icon,t,d in [('01','📷','Scanne ou photo','L\'IA identifie le matériau depuis votre caméra ou une photo uploadée.'),('02','⚖️','Indiquez le poids','Saisie libre ou boutons rapides — le montant se calcule en temps réel.'),('03','📍','Déposez au point','Rendez-vous avec votre QR code — l\'agent valide en un clic.'),('04','💰','Payé en 10s','Mobile money crédité instantanément. Wave ou Orange Money.')] %}
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:22px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:1px;background:var(--copper);opacity:.4;"></div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-bottom:12px;letter-spacing:2px;">{{n}}</div>
+        <div style="font-size:28px;margin-bottom:10px;">{{icon}}</div>
+        <div style="font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:700;color:var(--ivory);margin-bottom:5px;">{{t}}</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6;">{{d}}</div>
+      </div>{% endfor %}
     </div>
   </div>
 </section>
 
-<!-- CTA SECTION -->
-<section class="section" style="text-align:center;background:linear-gradient(135deg,var(--green-dark) 0%,#050F0A 100%);">
-  <div style="max-width:600px;margin:0 auto;">
-    <div style="font-size:clamp(36px,5vw,56px);font-weight:800;line-height:1;margin-bottom:20px;letter-spacing:-2px;">
-      Les déchets sont<br><span style="color:var(--green-light);">notre or.</span>
-    </div>
-    <p style="font-size:16px;color:rgba(255,255,255,.6);margin-bottom:32px;line-height:1.7;">
-      Rejoins des milliers de citoyens qui transforment leurs déchets en revenus tout en rendant leur ville plus propre.
-    </p>
-    <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg">♻️ Rejoindre WasteBank</a>
+<section style="padding:72px 52px;background:var(--obsidian);text-align:center;border-top:1px solid var(--border);">
+  <div style="max-width:560px;margin:0 auto;">
+    <h2 style="font-family:'Cormorant Garamond',serif;font-size:48px;font-weight:700;color:var(--ivory);line-height:1;margin-bottom:18px;letter-spacing:-.5px;">Les déchets sont<br><em style="color:var(--copper-lt);">notre richesse.</em></h2>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:28px;line-height:1.7;">WasteBank crée une nouvelle économie pour des millions de personnes invisibles.</p>
+    <a href="{{ url_for('auth.register') }}" class="btn btn-copper btn-xl">Rejoindre WasteBank</a>
   </div>
 </section>
 
-<!-- FOOTER -->
-<footer style="background:var(--bg2);border-top:1px solid var(--border);padding:32px 60px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
-  <div style="font-size:18px;font-weight:800;">
-    <span style="color:var(--green);">Waste</span><span style="color:var(--amber);">Bank</span>
-  </div>
-  <div style="font-size:12px;color:var(--muted);">© 2026 WasteBank Africa · contact@wastebank.africa</div>
-  <div style="display:flex;gap:12px;">
-    <a href="{{ url_for('auth.login') }}" style="font-size:13px;color:var(--muted);">Connexion</a>
-    <a href="{{ url_for('auth.register') }}" style="font-size:13px;color:var(--green);">S'inscrire</a>
-    <a href="/api/prices" style="font-size:13px;color:var(--muted);">API</a>
+<footer style="background:var(--void);border-top:1px solid var(--border);padding:20px 52px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+  <span style="font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:700;color:var(--ivory);">WasteBank</span>
+  <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);">© 2026 · contact@wastebank.africa</span>
+  <div style="display:flex;gap:14px;">
+    <a href="{{ url_for('auth.login') }}" style="font-size:12px;color:var(--dim);">Connexion</a>
+    <a href="{{ url_for('public.prices') }}" style="font-size:12px;color:var(--dim);">Prix</a>
+    <a href="/api/prices" style="font-size:12px;color:var(--dim);">API</a>
   </div>
 </footer>
-
+<style>@keyframes p{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.8);}}@media(max-width:768px){section[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important;}}</style>
 {% endblock %}

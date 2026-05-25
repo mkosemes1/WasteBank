@@ -1,113 +1,100 @@
 {% extends "base.html" %}
 {% block body %}
 <div class="app-layout">
-
-  <!-- SIDEBAR -->
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-      <div class="logo-text"><span class="logo-waste">Waste</span><span class="logo-bank">Bank</span></div>
-      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:2px;margin-top:4px;">PLATEFORME BETA</div>
+  <aside class="sidebar" id="sb">
+    <div class="sb-logo">
+      <div class="sb-logo-inner">
+        <div class="sb-icon">♻</div>
+        <div>
+          <div class="sb-name">WasteBank</div>
+          <div class="sb-tag">Plateforme bêta</div>
+        </div>
+      </div>
     </div>
-
-    <nav class="sidebar-nav">
-      <div class="nav-section-label">Principal</div>
-      <a href="{{ url_for('dash.home') }}" class="nav-item {% if request.endpoint == 'dash.home' %}active{% endif %}">
-        <span class="nav-icon">🏠</span> Tableau de bord
+    <nav class="sb-nav">
+      <div class="sb-sect">Principal</div>
+      <a href="{{ url_for('dash.home') }}" class="nav-item {% if request.endpoint=='dash.home' %}active{% endif %}">
+        <span class="nav-ico">⊞</span>Tableau de bord
       </a>
-      <a href="{{ url_for('scan.confirm') }}" class="nav-item {% if 'scan' in request.endpoint %}active{% endif %}">
-        <span class="nav-icon">📷</span> Scanner un déchet
+      <a href="{{ url_for('scan.confirm') }}" class="nav-item {% if 'scan' in (request.endpoint or '') %}active{% endif %}">
+        <span class="nav-ico">◈</span>Nouveau dépôt
       </a>
-      <a href="{{ url_for('dash.wallet') }}" class="nav-item {% if request.endpoint == 'dash.wallet' %}active{% endif %}">
-        <span class="nav-icon">💰</span> Mon portefeuille
+      <a href="{{ url_for('dash.wallet') }}" class="nav-item {% if request.endpoint=='dash.wallet' %}active{% endif %}">
+        <span class="nav-ico">◎</span>Portefeuille
       </a>
-      <a href="{{ url_for('dash.profile') }}" class="nav-item {% if request.endpoint == 'dash.profile' %}active{% endif %}">
-        <span class="nav-icon">👤</span> Mon profil
+      <a href="{{ url_for('dash.profile') }}" class="nav-item {% if request.endpoint=='dash.profile' %}active{% endif %}">
+        <span class="nav-ico">◉</span>Mon profil
       </a>
 
       {% if current_user and current_user['role'] in ('collector','admin') %}
-      <div class="nav-section-label">Collecteur</div>
-      <a href="{{ url_for('dash.collector') }}" class="nav-item {% if request.endpoint == 'dash.collector' %}active{% endif %}">
-        <span class="nav-icon">📦</span> Valider dépôts
+      <div class="sb-sect">Collecteur</div>
+      <a href="{{ url_for('dash.collector') }}" class="nav-item {% if request.endpoint=='dash.collector' %}active{% endif %}">
+        <span class="nav-ico">✦</span>Valider dépôts
+      </a>
+      <a href="{{ url_for('agent.scan_page') }}" class="nav-item {% if 'agent' in (request.endpoint or '') %}active{% endif %}">
+        <span class="nav-ico">⬡</span>Portails Agent QR
       </a>
       {% endif %}
 
-      {% if current_user and current_user['role'] == 'admin' %}
-      <div class="nav-section-label">Administration</div>
-      <a href="{{ url_for('admin.dashboard') }}" class="nav-item {% if 'admin' in request.endpoint %}active{% endif %}">
-        <span class="nav-icon">⚙️</span> Admin panel
+      {% if current_user and current_user['role']=='admin' %}
+      <div class="sb-sect">Administration</div>
+      <a href="{{ url_for('admin.dashboard') }}" class="nav-item {% if request.endpoint=='admin.dashboard' %}active{% endif %}">
+        <span class="nav-ico">◆</span>Vue globale
       </a>
-      <a href="{{ url_for('admin.users') }}" class="nav-item">
-        <span class="nav-icon">👥</span> Utilisateurs
+      <a href="{{ url_for('admin.users') }}" class="nav-item {% if request.endpoint=='admin.users' %}active{% endif %}">
+        <span class="nav-ico">◈</span>Utilisateurs
       </a>
       <a href="{{ url_for('admin.waste_types') }}" class="nav-item">
-        <span class="nav-icon">♻️</span> Types déchets
+        <span class="nav-ico">◇</span>Types & Prix
       </a>
       <a href="{{ url_for('admin.collection_points') }}" class="nav-item">
-        <span class="nav-icon">📍</span> Points collecte
+        <span class="nav-ico">◎</span>Points collecte
       </a>
       <a href="{{ url_for('admin.deposits') }}" class="nav-item">
-        <span class="nav-icon">📋</span> Tous les dépôts
+        <span class="nav-ico">▦</span>Tous dépôts
       </a>
       <a href="{{ url_for('admin.rse') }}" class="nav-item">
-        <span class="nav-icon">📊</span> Rapports RSE
+        <span class="nav-ico">◈</span>Rapports RSE
       </a>
       {% endif %}
 
-      <div class="nav-section-label">Liens</div>
-      <a href="{{ url_for('public.prices') }}" class="nav-item">
-        <span class="nav-icon">💲</span> Prix du jour
-      </a>
-      <a href="{{ url_for('public.points_map') }}" class="nav-item">
-        <span class="nav-icon">🗺️</span> Points de collecte
-      </a>
+      <div class="sb-sect">Infos</div>
+      <a href="{{ url_for('public.prices') }}"     class="nav-item"><span class="nav-ico">◐</span>Prix du jour</a>
+      <a href="{{ url_for('public.points_map') }}" class="nav-item"><span class="nav-ico">◌</span>Points collecte</a>
     </nav>
-
-    <div class="sidebar-footer">
+    <div class="sb-footer">
       {% if current_user %}
-      <div class="user-chip">
-        <div class="avatar">{{ current_user['name'][:2].upper() }}</div>
-        <div class="user-info">
-          <div class="name">{{ current_user['name'].split()[0] }}</div>
-          <div class="role">{{ current_user['role'] }}</div>
+      <div class="u-chip">
+        <div class="av {% if current_user['role']=='admin' %}rb{% elif current_user['role']=='collector' %}sp{% endif %}">
+          {{ current_user['name'][:2].upper() }}
         </div>
+        <div style="flex:1;min-width:0;">
+          <div class="u-n">{{ current_user['name'].split()[0] }}</div>
+          <div class="u-r">{{ current_user['role'] }}</div>
+        </div>
+        <a href="{{ url_for('auth.logout') }}" style="color:var(--dim);font-size:13px;" title="Déconnexion">⇥</a>
       </div>
-      <a href="{{ url_for('auth.logout') }}" class="nav-item" style="margin-top:8px;border-radius:8px;">
-        <span class="nav-icon">🚪</span> Déconnexion
-      </a>
       {% endif %}
     </div>
   </aside>
 
-  <!-- MAIN -->
   <div class="main-content">
     <header class="topbar">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <button class="btn-icon" id="menuToggle" style="display:none;" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="ico-btn" id="mbtn" onclick="document.getElementById('sb').classList.toggle('open')" style="display:none">☰</button>
         <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
       </div>
-      <div class="topbar-right">
-        {% if current_user %}
-        <button class="btn-icon has-notif" id="notifBtn" title="Notifications" onclick="markNotifRead()">🔔</button>
-        {% endif %}
-        <a href="{{ url_for('public.index') }}" class="btn btn-outline btn-sm">🌐 Site public</a>
+      <div class="topbar-r">
+        <button class="ico-btn ping" id="nBtn" onclick="markR()" title="Notifications">🔔</button>
+        <a href="{{ url_for('public.index') }}" class="btn btn-dim btn-sm">↗ Site</a>
       </div>
     </header>
-
-    <div class="content-area">
-      {% block content %}{% endblock %}
-    </div>
+    <div class="content">{% block content %}{% endblock %}</div>
   </div>
 </div>
-
 <script>
-function markNotifRead() {
-  fetch("{{ url_for('dash.mark_read') }}", {method:'POST'})
-    .then(() => document.getElementById('notifBtn').classList.remove('has-notif'));
-}
-// Mobile responsive
-if (window.innerWidth <= 768) {
-  document.getElementById('menuToggle').style.display = 'flex';
-}
+function markR(){fetch("{{ url_for('dash.mark_read') }}",{method:'POST'}).then(()=>document.getElementById('nBtn').classList.remove('ping'));}
+if(window.innerWidth<=768)document.getElementById('mbtn').style.display='flex';
 </script>
 {% block scripts %}{% endblock %}
 {% endblock %}

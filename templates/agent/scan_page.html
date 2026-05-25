@@ -1,0 +1,128 @@
+{% extends "dashboard/layout.html" %}
+{% block title %}Portails Agent{% endblock %}
+{% block page_title %}⬡ Portails Agent{% endblock %}
+
+{% block content %}
+<div style="max-width:720px;">
+
+  <!-- Explication -->
+  <div style="background:var(--forest2);border-radius:var(--r);padding:20px 24px;margin-bottom:24px;display:flex;gap:16px;align-items:flex-start;">
+    <div style="font-size:32px;flex-shrink:0;">🔗</div>
+    <div>
+      <div style="font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:#fff;margin-bottom:6px;">
+        Liens dédiés aux agents de collecte
+      </div>
+      <p style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.6;">
+        Chaque point de collecte possède un lien sécurisé unique. Envoyez ce lien à votre agent
+        sur WhatsApp, SMS ou email. Il peut l'ouvrir sur n'importe quel téléphone — <strong style="color:rgba(255,255,255,.85);">sans compte WasteBank</strong>.
+        Il scanne le QR code du citoyen et valide : le paiement est versé instantanément.
+      </p>
+    </div>
+  </div>
+
+  <!-- Comment ça marche -->
+  <div class="card mb3">
+    <div class="card-head"><span class="card-title">Comment utiliser ces liens</span></div>
+    <div class="card-body" style="padding:16px 20px;">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        {% for n, icon, t, d in [
+          ('01','📤','Envoyez le lien à votre agent','Copiez le lien du point de collecte et envoyez-le par WhatsApp ou SMS.'),
+          ('02','📱','L\'agent ouvre le lien','Il accède à la page directement — pas de téléchargement, pas de compte.'),
+          ('03','📷','Il scanne le QR du citoyen','La caméra détecte automatiquement le code ou il le saisit manuellement.'),
+          ('04','✓','Il valide, le citoyen est payé','Le montant est crédité instantanément sur le portefeuille WasteBank.'),
+        ] %}
+        <div style="display:flex;gap:12px;align-items:flex-start;">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--forest);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:10px;font-weight:600;flex-shrink:0;">{{ n }}</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;margin-bottom:1px;">{{ icon }} {{ t }}</div>
+            <div style="font-size:12px;color:var(--muted);">{{ d }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Liste des liens -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Liens par point de collecte</span>
+      <span class="badge badge-green">{{ point_links|length }} points actifs</span>
+    </div>
+    <div style="padding:0;">
+      {% for pl in point_links %}
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);{% if loop.last %}border-bottom:none;{% endif %}">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:14px;margin-bottom:2px;">📍 {{ pl['name'] }}</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">{{ pl['address'] }} — {{ pl['city'] }}</div>
+            <!-- URL affichée -->
+            <div style="background:var(--paper2);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;display:flex;align-items:center;gap:8px;">
+              <span id="url_{{ pl['id'] }}" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--forest);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                {{ pl['url'] }}
+              </span>
+              <button onclick="copyLink('{{ pl['url'] }}', this)"
+                      style="flex-shrink:0;padding:4px 10px;border-radius:var(--r);border:1px solid var(--border);background:var(--cream);font-size:11px;font-weight:600;cursor:pointer;color:var(--ink);font-family:'DM Sans',sans-serif;transition:all .18s;"
+                      onmouseover="this.style.borderColor='var(--forest)';this.style.color='var(--forest)'"
+                      onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--ink)'">
+                📋 Copier
+              </button>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+            <a href="{{ pl['url'] }}" target="_blank" class="btn btn-forest btn-sm">
+              Ouvrir →
+            </a>
+            <button onclick="shareLink('{{ pl['url'] }}', '{{ pl['name'] }}')"
+                    class="btn btn-outline btn-sm">
+              Partager
+            </button>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div style="padding:40px;text-align:center;color:var(--muted);">
+        <div style="font-size:36px;margin-bottom:10px;">📍</div>
+        <div style="font-weight:600;">Aucun point de collecte actif.</div>
+        <div style="font-size:12px;margin-top:4px;">
+          <a href="{{ url_for('admin.collection_points') }}" style="color:var(--forest);">Ajouter un point →</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyLink(url, btn) {
+  navigator.clipboard.writeText(url).then(() => {
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✓ Copié !';
+    btn.style.borderColor = 'var(--forest)';
+    btn.style.color = 'var(--forest)';
+    setTimeout(() => {
+      btn.innerHTML = orig;
+      btn.style.borderColor = 'var(--border)';
+      btn.style.color = 'var(--ink)';
+    }, 2000);
+  }).catch(() => {
+    prompt('Copiez ce lien :', url);
+  });
+}
+
+function shareLink(url, name) {
+  if (navigator.share) {
+    navigator.share({
+      title: 'WasteBank — Portail agent ' + name,
+      text: 'Lien de validation des dépôts WasteBank pour ' + name,
+      url: url,
+    });
+  } else {
+    copyLink(url, document.activeElement);
+  }
+}
+</script>
+{% endblock %}
