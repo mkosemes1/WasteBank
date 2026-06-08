@@ -1,82 +1,119 @@
 {% extends "dashboard/layout.html" %}
 {% block title %}Espace Collecteur{% endblock %}
-{% block page_title %}📦 Validation des dépôts{% endblock %}
+{% block page_title %}Espace Collecteur{% endblock %}
 {% block content %}
 
-<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);">
-  <div class="stat-card green">
-    <div class="stat-label">Validés aujourd'hui</div>
-    <div class="stat-value green">{{ today_stats['count'] }}</div>
-    <div class="stat-sub">dépôts traités</div>
+{% if cp %}
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+  <span style="font-size:20px;">📍</span>
+  <div>
+    <div style="font-weight:700;color:var(--ivory);">{{ cp['name'] }}</div>
+    <div style="font-size:12px;color:var(--muted);">{{ cp['address'] }} — {{ cp['city'] }}</div>
   </div>
-  <div class="stat-card amber">
-    <div class="stat-label">Kg collectés</div>
-    <div class="stat-value amber">{{ "%.1f"|format(today_stats['kg'] or 0) }}</div>
-    <div class="stat-sub">kilogrammes</div>
+  <a href="{{ url_for('agent.scan_page') }}" class="btn btn-copper btn-sm" style="margin-left:auto;">Portail Agent QR</a>
+</div>
+{% else %}
+<div style="background:rgba(184,50,86,.1);border:1px solid rgba(184,50,86,.3);border-radius:var(--r);padding:14px;margin-bottom:20px;color:var(--ruby-lt);">
+  Vous n'avez pas encore de point de collecte assigné. Contactez l'administrateur.
+</div>
+{% endif %}
+
+<!-- Stats du jour -->
+<div class="stats-row" style="grid-template-columns:repeat(3,1fr);">
+  <div class="stat c"><div class="st-lbl">Validés aujourd'hui</div><div class="st-val">{{ today['count'] }}</div></div>
+  <div class="stat r"><div class="st-lbl">Kg collectés</div><div class="st-val">{{ "%.1f"|format(today['kg'] or 0) }}</div></div>
+  <div class="stat s"><div class="st-lbl">FCFA distribués</div><div class="st-val">{{ "%.0f"|format((today['fcfa'] or 0)/1000) }}K</div></div>
+</div>
+
+<div class="g2" style="margin-bottom:18px;">
+  <!-- Pending deposits -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Dépôts en attente</span>
+      <span class="badge b-copper">{{ pending|length }}</span>
+    </div>
+    {% if pending %}
+    <div class="tbl"><table>
+      <thead><tr><th>Citoyen</th><th>Type</th><th>Poids</th><th>Montant</th><th>Actions</th></tr></thead>
+      <tbody>{% for d in pending %}
+        <tr>
+          <td>
+            <div style="font-size:13px;font-weight:600;">{{ d['citizen_name'] }}</div>
+            <div style="font-size:10px;color:var(--muted);" class="mono">{{ d['citizen_phone'] or '' }}</div>
+          </td>
+          <td><span style="display:flex;align-items:center;gap:5px;"><span style="width:7px;height:7px;border-radius:50%;background:#{{ d['color_hex'] }};flex-shrink:0;"></span>{{ d['waste_name'] }}</span></td>
+          <td class="mono" style="font-size:11.5px;">{{ d['weight_kg'] }} kg</td>
+          <td class="mono c-copper" style="font-size:11.5px;font-weight:600;">{{ "%.0f"|format(d['total_fcfa']) }} ₣</td>
+          <td>
+            <div style="display:flex;gap:5px;">
+              <form method="POST" action="{{ url_for('dash.validate_deposit',dep_id=d['id']) }}" style="display:inline;">
+                <input type="hidden" name="action" value="validate">
+                <button type="submit" class="btn btn-copper btn-sm" onclick="return confirm('Valider et payer {{ '%.0f'|format(d.total_fcfa) }} FCFA ?')">✓</button>
+              </form>
+              <form method="POST" action="{{ url_for('dash.validate_deposit',dep_id=d['id']) }}" style="display:inline;">
+                <input type="hidden" name="action" value="reject">
+                <button type="submit" class="btn btn-ruby btn-sm" onclick="return confirm('Rejeter ce dépôt ?')">✕</button>
+              </form>
+            </div>
+          </td>
+        </tr>{% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}
+    <div style="padding:40px;text-align:center;color:var(--dim);">
+      <div style="font-size:32px;margin-bottom:8px;">✓</div>
+      <div style="font-size:13px;">Aucun dépôt en attente</div>
+    </div>
+    {% endif %}
   </div>
-  <div class="stat-card coral">
-    <div class="stat-label">En attente</div>
-    <div class="stat-value coral">{{ pending|length }}</div>
-    <div class="stat-sub">à traiter</div>
+
+  <!-- Monthly stats chart -->
+  <div class="card">
+    <div class="card-head"><span class="card-title">Mes stats du mois</span></div>
+    <div class="card-body"><canvas id="cChart" height="180"></canvas></div>
+    <div style="padding:0 16px 12px;">
+      {% if monthly_stats %}
+      {% set current = monthly_stats[-1] if monthly_stats else None %}
+      {% if current %}
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border);">
+        <span style="font-size:12px;color:var(--muted);">Ce mois ({{ current['month'] }})</span>
+        <span class="mono c-copper" style="font-size:12px;font-weight:600;">{{ "%.0f"|format(current['fcfa'] or 0) }} FCFA · {{ "%.1f"|format(current['kg'] or 0) }} kg</span>
+      </div>{% endif %}{% endif %}
+    </div>
   </div>
 </div>
 
+<!-- Actions history -->
 <div class="card">
-  <div class="card-header">
-    <span class="card-title">⏳ Dépôts en attente de validation</span>
-    <span class="badge badge-amber">{{ pending|length }} en attente</span>
-  </div>
-  {% if pending %}
-  <div class="table-wrap">
-    <table>
-      <thead><tr>
-        <th>Citoyen</th><th>Type</th><th>Poids</th><th>Montant</th>
-        <th>Point</th><th>Date</th><th>Actions</th>
-      </tr></thead>
-      <tbody>
-        {% for d in pending %}
-        <tr>
-          <td>
-            <div style="font-weight:700;">{{ d['citizen_name'] }}</div>
-            <div style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;">{{ d['citizen_phone'] }}</div>
-          </td>
-          <td>
-            <div class="waste-dot">
-              <span class="dot" style="background:#{{ d['color_hex'] }}"></span>
-              {{ d['icon'] }} {{ d['waste_name'] }}
-            </div>
-          </td>
-          <td class="mono">{{ d['weight_kg'] }} kg</td>
-          <td class="mono text-amber" style="font-weight:700;">{{ "%.0f"|format(d['total_fcfa']) }} ₣</td>
-          <td style="font-size:12px;">{{ d['point_name'] }}</td>
-          <td style="font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;">{{ d['created_at'][:16] }}</td>
-          <td>
-            <div style="display:flex;gap:6px;">
-              <form method="POST" action="{{ url_for('dash.validate_deposit', dep_id=d['id']) }}" style="display:inline;">
-                <input type="hidden" name="action" value="validate">
-                <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Valider ce dépôt et payer {{ "%.0f"|format(d["total_fcfa"]) }} FCFA ?')">
-                  ✓ Valider
-                </button>
-              </form>
-              <form method="POST" action="{{ url_for('dash.validate_deposit', dep_id=d['id']) }}" style="display:inline;">
-                <input type="hidden" name="action" value="reject">
-                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Rejeter ce dépôt ?')">
-                  ✗
-                </button>
-              </form>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div style="text-align:center;padding:60px;color:var(--muted);">
-    <div style="font-size:48px;margin-bottom:12px;">✅</div>
-    <div style="font-size:16px;font-weight:700;">Tout est à jour !</div>
-    <div style="font-size:13px;margin-top:4px;">Aucun dépôt en attente de validation.</div>
-  </div>
-  {% endif %}
+  <div class="card-head"><span class="card-title">Historique de mes actions</span></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Date</th><th>Action</th><th>Déchet</th><th>Montant</th><th>Ref QR</th></tr></thead>
+    <tbody>{% for a in actions %}
+      <tr>
+        <td class="mono" style="font-size:10px;color:var(--muted);">{{ a['created_at'][:16] }}</td>
+        <td><span class="badge {% if 'validat' in a['action'] %}b-green{% elif 'reject' in a['action'] %}b-ruby{% else %}b-dim{% endif %}">{{ a['action'] }}</span></td>
+        <td style="font-size:12px;">{{ a['waste_name'] or '—' }}</td>
+        <td class="mono c-copper" style="font-size:11.5px;">{% if a['amount_fcfa'] %}{{ "%.0f"|format(a['amount_fcfa']) }} ₣{% else %}—{% endif %}</td>
+        <td class="mono" style="font-size:10px;color:var(--muted);">{{ a['qr_code'] or '—' }}</td>
+      </tr>{% else %}
+      <tr><td colspan="5" style="text-align:center;color:var(--dim);padding:20px;font-size:12px;">Aucune action enregistrée</td></tr>
+      {% endfor %}
+    </tbody>
+  </table></div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const M={{ monthly_stats|map(attribute='month')|list|tojson }};
+const K={{ monthly_stats|map(attribute='kg')|list|tojson }};
+const C={{ monthly_stats|map(attribute='count')|list|tojson }};
+new Chart(document.getElementById('cChart'),{type:'bar',data:{labels:M,datasets:[
+  {label:'Kg validés',data:K,backgroundColor:'rgba(200,121,65,.5)',borderColor:'#C87941',borderWidth:1,yAxisID:'y'},
+  {label:'Nb dépôts',data:C,type:'line',borderColor:'#4A7FD0',tension:.4,yAxisID:'y1',pointBackgroundColor:'#4A7FD0'}
+]},options:{responsive:true,plugins:{legend:{labels:{color:'#7A7880',font:{family:'JetBrains Mono',size:9}}}},
+  scales:{x:{ticks:{color:'#4A4855',font:{size:9}},grid:{color:'rgba(42,42,54,.4)'}},
+          y:{ticks:{color:'#C87941'},grid:{color:'rgba(42,42,54,.4)'},position:'left'},
+          y1:{ticks:{color:'#4A7FD0'},grid:{display:false},position:'right'}}}});
+</script>
 {% endblock %}

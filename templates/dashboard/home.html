@@ -7,10 +7,11 @@
   <div class="stat c"><div class="st-lbl">Solde FCFA</div><div class="st-val">{{ "%.0f"|format(user['balance']) }}</div><div class="st-sub">Disponible · <a href="{{ url_for('dash.wallet') }}" class="c-copper">Retirer →</a></div></div>
   <div class="stat r"><div class="st-lbl">Kg collectés</div><div class="st-val">{{ "%.1f"|format(stats['total_kg'] or 0) }}</div><div class="st-sub">Déchets valorisés</div></div>
   <div class="stat s"><div class="st-lbl">FCFA gagnés</div><div class="st-val">{{ "%.0f"|format((stats['total_earned'] or 0)/1000) }}K</div><div class="st-sub">Total historique</div></div>
-  <div class="stat i"><div class="st-lbl">Points éco</div><div class="st-val">{{ user['points'] }}</div><div class="st-sub">Fidélité WasteBank</div></div>
+  <div class="stat i"><div class="st-lbl">Score IA</div><div class="st-val" id="aiScore">—</div><div class="st-sub" id="aiLevel">Calcul en cours…</div></div>
 </div>
 
 <div class="g2" style="margin-bottom:18px;">
+  <!-- Wallet -->
   <div class="wallet-card">
     <div class="w-lbl">PORTEFEUILLE</div>
     <div class="w-amt">{{ "%.0f"|format(user['balance']) }}<span class="w-unit"> FCFA</span></div>
@@ -19,50 +20,101 @@
       <a href="{{ url_for('dash.wallet') }}"  class="btn btn-ghost">↑ Retirer</a>
     </div>
   </div>
-  <div class="card">
-    <div class="card-head"><span class="card-title">Prix du jour</span><a href="{{ url_for('public.prices') }}" class="c-copper" style="font-size:12px;">Tout voir →</a></div>
-    <div>{% for wt in waste_types[:5] %}
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid var(--border);">
-        <div style="display:flex;align-items:center;gap:7px;"><div style="width:7px;height:7px;border-radius:50%;background:#{{wt['color_hex']}}"></div><span style="font-size:12.5px;">{{wt['icon']}} {{wt['name']}}</span></div>
-        <span class="mono c-copper" style="font-size:11.5px;">{{ "%.0f"|format(wt['price_fcfa']) }} ₣/kg</span>
-      </div>{% endfor %}
+
+  <!-- IA Score Card -->
+  <div class="card" id="aiScoreCard">
+    <div class="card-head">
+      <span class="card-title">Mon score IA</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--muted);">COMPORTEMENTAL</span>
+    </div>
+    <div class="card-body" id="aiScoreBody">
+      <div style="text-align:center;padding:10px;color:var(--dim);font-size:12px;">Chargement…</div>
     </div>
   </div>
 </div>
 
 <div class="g2" style="margin-bottom:18px;">
+  <!-- Chart -->
   <div class="card">
-    <div class="card-head"><span class="card-title">Activité — 6 mois</span></div>
+    <div class="card-head">
+      <span class="card-title">Activité — 6 mois</span>
+      <span id="predBadge" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);">Prédiction IA…</span>
+    </div>
     <div class="card-body"><canvas id="aC" height="190"></canvas></div>
   </div>
+
+  <!-- Dépôts + points suggérés -->
   <div class="card">
-    <div class="card-head"><span class="card-title">Dépôts récents</span><a href="{{ url_for('scan.confirm') }}" class="btn btn-copper btn-sm">+ Nouveau</a></div>
+    <div class="card-head">
+      <span class="card-title">Dépôts récents</span>
+      <a href="{{ url_for('scan.confirm') }}" class="btn btn-copper btn-sm">+ Nouveau</a>
+    </div>
     <div class="tbl"><table>
       <thead><tr><th>Type</th><th>Poids</th><th>Montant</th><th>Statut</th></tr></thead>
-      <tbody>{% for d in deposits %}
+      <tbody>
+        {% for d in deposits %}
         <tr>
           <td><div style="display:flex;align-items:center;gap:6px;"><div style="width:7px;height:7px;border-radius:50%;background:#{{d['color_hex']}}"></div>{{d['icon']}} {{d['waste_name']}}</div></td>
           <td class="mono c-muted" style="font-size:11.5px;">{{d['weight_kg']}} kg</td>
           <td class="mono c-copper" style="font-size:11.5px;font-weight:600;">{{ "%.0f"|format(d['total_fcfa']) }} ₣</td>
           <td>{% if d['status']=='paid' %}<span class="badge b-green">Payé</span>{% elif d['status']=='pending' %}<span class="badge b-copper">Attente</span>{% else %}<span class="badge b-ruby">{{d['status']}}</span>{% endif %}</td>
-        </tr>{% else %}
-        <tr><td colspan="4" style="text-align:center;color:var(--dim);padding:24px;font-size:12.5px;">Aucun dépôt — <a href="{{ url_for('scan.confirm') }}" class="c-copper">créer →</a></td></tr>
-      {% endfor %}</tbody>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" style="text-align:center;color:var(--dim);padding:24px;font-size:12.5px;">
+          Aucun dépôt — <a href="{{ url_for('scan.confirm') }}" class="c-copper">créer →</a>
+        </td></tr>
+        {% endfor %}
+      </tbody>
     </table></div>
   </div>
 </div>
 
-<div class="card">
-  <div class="card-head"><span class="card-title">Points de collecte</span><a href="{{ url_for('public.points_map') }}" style="font-size:12px;color:var(--muted);">Voir carte →</a></div>
-  <div class="g3" style="padding:14px;gap:10px;">
-    {% for cp in collection_points[:6] %}
-    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:11px;">
-      <div style="font-weight:600;font-size:12px;margin-bottom:2px;">📍 {{cp['name']}}</div>
-      <div style="font-size:11px;color:var(--dim);">{{cp['address']}}</div>
-      <span class="badge b-green" style="margin-top:5px;">{{cp['city']}}</span>
-    </div>{% endfor %}
+<!-- IA Prix dynamiques + Points de collecte -->
+<div class="g2" style="margin-bottom:18px;">
+  <!-- Dynamic prices from AI -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Prix IA du jour</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--copper);">DYNAMIQUE</span>
+    </div>
+    <div id="aiPrices">
+      {% for wt in waste_types[:6] %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 16px;border-bottom:1px solid var(--border);">
+        <div style="display:flex;align-items:center;gap:7px;">
+          <div style="width:7px;height:7px;border-radius:50%;background:#{{wt['color_hex']}}"></div>
+          <span style="font-size:12.5px;">{{wt['name']}}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="mono c-copper" style="font-size:12px;font-weight:600;" id="price_{{wt['id']}}">{{ "%.0f"|format(wt['price_fcfa']) }} ₣/kg</span>
+          <span id="adj_{{wt['id']}}" style="font-size:9px;font-family:'JetBrains Mono',monospace;"></span>
+        </div>
+      </div>{% endfor %}
+    </div>
+    <div style="padding:8px 16px;border-top:1px solid var(--border);">
+      <a href="{{ url_for('public.prices') }}" style="font-size:11px;color:var(--muted);">Voir tout →</a>
+    </div>
+  </div>
+
+  <!-- Points de collecte suggérés par IA -->
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Points suggérés</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--sapphire);">IA GÉOLOC</span>
+    </div>
+    <div id="suggestedPoints">
+      {% for cp in collection_points[:4] %}
+      <div style="padding:10px 16px;border-bottom:1px solid var(--border);">
+        <div style="font-size:12.5px;font-weight:600;">📍 {{cp['name']}}</div>
+        <div style="font-size:11px;color:var(--muted);">{{cp['address']}}</div>
+        <span class="badge b-green" style="margin-top:4px;">{{cp['city']}}</span>
+      </div>{% endfor %}
+    </div>
+    <div style="padding:8px 16px;border-top:1px solid var(--border);">
+      <button onclick="getGeoSuggestions()" class="btn btn-ghost btn-sm">📡 Suggérer selon ma position</button>
+    </div>
   </div>
 </div>
+
 {% endblock %}
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -70,13 +122,147 @@
 const M={{ monthly|map(attribute='month')|list|tojson }};
 const K={{ monthly|map(attribute='kg')|list|tojson }};
 const F={{ monthly|map(attribute='fcfa')|list|tojson }};
-new Chart(document.getElementById('aC'),{type:'bar',data:{labels:M,datasets:[
-  {label:'Kg',data:K,backgroundColor:'rgba(200,121,65,.35)',borderColor:'#C87941',borderWidth:1,yAxisID:'y'},
-  {label:'FCFA',data:F,type:'line',borderColor:'#B83256',backgroundColor:'rgba(184,50,86,.08)',borderWidth:1.5,pointBackgroundColor:'#B83256',tension:.4,yAxisID:'y1',fill:true}
-]},options:{responsive:true,plugins:{legend:{labels:{color:'#7A7880',font:{family:'JetBrains Mono',size:9}}}},scales:{
-  x:{ticks:{color:'#4A4855',font:{size:9}},grid:{color:'rgba(42,42,54,.5)'}},
-  y:{ticks:{color:'#C87941'},grid:{color:'rgba(42,42,54,.5)'},position:'left'},
-  y1:{ticks:{color:'#B83256'},grid:{display:false},position:'right'}
-}}});
+
+const chart = new Chart(document.getElementById('aC'),{
+  type:'bar',
+  data:{labels:M,datasets:[
+    {label:'Kg',data:K,backgroundColor:'rgba(200,121,65,.35)',borderColor:'#C87941',borderWidth:1,yAxisID:'y'},
+    {label:'FCFA',data:F,type:'line',borderColor:'#B83256',backgroundColor:'rgba(184,50,86,.08)',
+     borderWidth:1.5,pointBackgroundColor:'#B83256',tension:.4,yAxisID:'y1',fill:true}
+  ]},
+  options:{responsive:true,
+    plugins:{legend:{labels:{color:'#7A7880',font:{family:'JetBrains Mono',size:9}}}},
+    scales:{
+      x:{ticks:{color:'#4A4855',font:{size:9}},grid:{color:'rgba(42,42,54,.5)'}},
+      y:{ticks:{color:'#C87941'},grid:{color:'rgba(42,42,54,.5)'},position:'left'},
+      y1:{ticks:{color:'#B83256'},grid:{display:false},position:'right'}
+    }
+  }
+});
+
+// Load AI data on page load
+document.addEventListener('DOMContentLoaded', () => {
+  loadAIScore();
+  loadDynamicPrices();
+  loadMonthlyPrediction();
+});
+
+// ── AI Score ──────────────────────────────────────────────────────────────────
+async function loadAIScore(){
+  try{
+    const r = await fetch('/ai/citizen/score');
+    const d = await r.json();
+    document.getElementById('aiScore').textContent = d.score;
+    document.getElementById('aiLevel').textContent = d.badge+' '+d.level;
+
+    const body = document.getElementById('aiScoreBody');
+    const comps = d.components || {};
+    let html = `<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+      <div style="font-size:42px;font-weight:700;color:var(--copper);">${d.score}</div>
+      <div>
+        <div style="font-size:15px;font-weight:700;">${d.badge} ${d.level}</div>
+        <div style="font-size:11px;color:var(--muted);">${d.total_deposits||0} dépôts · ${d.total_kg?.toFixed(1)||0} kg</div>
+      </div>
+    </div>`;
+
+    // Progress bars for each component
+    const labels = {validation:'Taux validation',regularity:'Régularité',
+                    diversity:'Diversité tri',volume:'Volume total',seniority:'Ancienneté'};
+    for(const [key,val] of Object.entries(comps)){
+      const pct = Math.round(val.score/val.max*100);
+      html += `<div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+          <span style="font-size:11px;color:var(--muted);">${labels[key]||key}</span>
+          <span style="font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--copper);">${val.value}</span>
+        </div>
+        <div style="height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:var(--copper);border-radius:2px;transition:width .6s;"></div>
+        </div>
+      </div>`;
+    }
+
+    if(d.recommendations?.length){
+      html += `<div style="margin-top:10px;padding:9px;background:var(--surface2);border-radius:var(--r);font-size:11px;color:var(--muted);">
+        💡 ${d.recommendations[0]}
+      </div>`;
+    }
+    body.innerHTML = html;
+  }catch(e){
+    document.getElementById('aiScoreBody').innerHTML = '<div style="font-size:11px;color:var(--dim);padding:8px;">Score indisponible</div>';
+  }
+}
+
+// ── Dynamic Prices ────────────────────────────────────────────────────────────
+async function loadDynamicPrices(){
+  try{
+    const r = await fetch('/ai/prices/dynamic');
+    const data = await r.json();
+    data.forEach(p => {
+      const priceEl = document.getElementById('price_'+p.waste_type_id);
+      const adjEl   = document.getElementById('adj_'+p.waste_type_id);
+      if(priceEl){
+        priceEl.textContent = p.suggested_price.toLocaleString('fr-FR',{maximumFractionDigits:0})+' ₣/kg';
+      }
+      if(adjEl && p.adjustment_pct !== 0){
+        const up = p.adjustment_pct > 0;
+        adjEl.textContent = (up?'↑':' ↓')+Math.abs(p.adjustment_pct)+'%';
+        adjEl.style.color = up ? '#5DBFA0' : '#D44A70';
+      }
+    });
+  }catch(e){}
+}
+
+// ── Monthly Prediction ────────────────────────────────────────────────────────
+async function loadMonthlyPrediction(){
+  try{
+    const r = await fetch('/ai/predict/monthly');
+    const d = await r.json();
+    if(!d.error){
+      const trend = d.trend==='hausse'?'↑':d.trend==='baisse'?'↓':'→';
+      document.getElementById('predBadge').textContent =
+        `${trend} Préd: ${d.predicted_kg}kg fin mois`;
+      document.getElementById('predBadge').style.color =
+        d.trend==='hausse'?'#5DBFA0':d.trend==='baisse'?'#D44A70':'var(--muted)';
+
+      // Add prediction point to chart
+      if(chart && d.predicted_kg > 0){
+        const currentMonth = new Date().toISOString().slice(0,7);
+        const idx = chart.data.labels.indexOf(currentMonth);
+        if(idx>=0){
+          // Already have data for current month
+        } else {
+          chart.data.labels.push(currentMonth+'*');
+          chart.data.datasets[0].data.push(d.predicted_kg);
+          chart.data.datasets[0].backgroundColor = [
+            ...Array(M.length).fill('rgba(200,121,65,.35)'),
+            'rgba(200,121,65,.15)'
+          ];
+          chart.update();
+        }
+      }
+    }
+  }catch(e){}
+}
+
+// ── Geo Suggestions ───────────────────────────────────────────────────────────
+function getGeoSuggestions(){
+  if(!navigator.geolocation){
+    alert('Géolocalisation non disponible'); return;
+  }
+  navigator.geolocation.getCurrentPosition(async (pos)=>{
+    try{
+      const r = await fetch(`/ai/points/suggest?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`);
+      const pts = await r.json();
+      const container = document.getElementById('suggestedPoints');
+      if(pts.length===0){ container.innerHTML='<div style="padding:14px;color:var(--dim);font-size:12px;">Aucun point avec coordonnées trouvé.</div>'; return; }
+      container.innerHTML = pts.map(p=>`
+        <div style="padding:10px 16px;border-bottom:1px solid var(--border);">
+          <div style="font-size:12.5px;font-weight:600;">📍 ${p.name}</div>
+          <div style="font-size:11px;color:var(--muted);">${p.reason}</div>
+          ${p.distance_km?`<span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--copper);">${p.distance_km} km</span>`:''}
+        </div>`).join('');
+    }catch(e){}
+  },()=>alert('Impossible d\'obtenir la position.'));
+}
 </script>
 {% endblock %}

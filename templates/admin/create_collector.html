@@ -1,0 +1,35 @@
+{% extends "dashboard/layout.html" %}
+{% block title %}Créer un collecteur{% endblock %}
+{% block page_title %}Créer un collecteur{% endblock %}
+{% block content %}
+<div style="max-width:540px;">
+  <div style="background:rgba(200,121,65,.08);border:1px solid rgba(200,121,65,.25);border-radius:var(--r);padding:14px 16px;margin-bottom:20px;font-size:13px;color:var(--ivory2);">
+    <strong style="color:var(--copper-lt);">Règle importante :</strong> Seul l'administrateur peut créer un compte collecteur. Chaque collecteur est assigné à un unique point de collecte.
+  </div>
+  <div class="card">
+    <div class="card-head"><span class="card-title">Nouveau collecteur</span></div>
+    <div class="card-body">
+      <form method="POST">
+        <div class="fg"><label>Nom complet</label><input type="text" name="name" required placeholder="Fatou Diallo" autofocus></div>
+        <div class="fg"><label>Email</label><input type="email" name="email" required placeholder="collecteur@wastebank.africa"></div>
+        <div class="fg"><label>Téléphone</label><input type="tel" name="phone" required placeholder="+221 77 000 00 00"></div>
+        <div class="fg"><label>Mot de passe initial</label><input type="password" name="password" required placeholder="Minimum 6 caractères"></div>
+        <div class="fg">
+          <label>Point de collecte assigné</label>
+          <select name="point_id" required>
+            <option value="">-- Sélectionnez un point --</option>
+            {% for cp in points %}
+            <option value="{{ cp['id'] }}">📍 {{ cp['name'] }} — {{ cp['city'] }}</option>
+            {% endfor %}
+          </select>
+          <div style="font-size:11px;color:var(--dim);margin-top:4px;">Le collecteur ne pourra valider que les dépôts de ce point.</div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:4px;">
+          <button type="submit" class="btn btn-copper btn-lg" style="flex:1;justify-content:center;">Créer le collecteur</button>
+          <a href="{{ url_for('admin.users') }}" class="btn btn-ghost btn-lg">Annuler</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

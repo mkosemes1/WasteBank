@@ -1,0 +1,288 @@
+<!-- Stats du jour -->
+<div class="day-stats">
+  <div class="ds"><div class="ds-val" id="sCount">{{ stats['count'] }}</div><div class="ds-lbl">VALIDÉS</div></div>
+  <div class="ds"><div class="ds-val" id="sKg">{{ "%.1f"|format(stats['kg']) }}</div><div class="ds-lbl">KG</div></div>
+  <div class="ds"><div class="ds-val" id="sFcfa" style="font-size:16px;">{{ "%.0f"|format(stats['fcfa']) }}</div><div class="ds-lbl">FCFA</div></div>
+</div>
+
+<!-- Point assigné info -->
+<div style="background:var(--s1);border:1px solid var(--b1);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px;">
+  <span style="font-size:18px;">📍</span>
+  <div>
+    <div style="font-weight:700;font-size:13px;color:var(--ivory);">{{ point['name'] }}</div>
+    <div style="font-size:11px;color:var(--muted);">{{ point['address'] }} — {{ point['city'] }}</div>
+  </div>
+  <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--jade);background:rgba(42,122,90,.15);border:1px solid rgba(42,122,90,.3);padding:2px 7px;border-radius:2px;letter-spacing:1px;">VOTRE POINT</span>
+</div>
+
+<!-- Scan card -->
+<div class="scan-card" id="scanSection">
+  <div class="scan-head">
+    <span class="scan-title">Scanner un dépôt</span>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--jade);display:flex;align-items:center;gap:5px;">
+      <span style="width:6px;height:6px;border-radius:50%;background:var(--jade);display:inline-block;animation:pulse 1.5s infinite;"></span>EN LIGNE
+    </span>
+  </div>
+  <div class="scan-body">
+    <div class="tabs">
+      <button class="stab active" id="tabCam" onclick="switchTab('cam')">📷 Caméra</button>
+      <button class="stab" id="tabManual" onclick="switchTab('manual')">✎ Code manuel</button>
+    </div>
+
+    <!-- Camera panel -->
+    <div id="panelCam">
+      <div class="cam-zone" id="camZone">
+        <div id="camPh" style="text-align:center;padding:18px;">
+          <div style="font-size:34px;margin-bottom:7px;">📷</div>
+          <div style="font-weight:600;font-size:13px;color:var(--ivory);">Activez la caméra</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">Pointez vers le QR code du dépôt</div>
+        </div>
+        <video id="videoQR" autoplay playsinline muted style="display:none;"></video>
+        <canvas id="qrCanvas" style="display:none;"></canvas>
+        <div class="sweep" id="sweepLine" style="display:none;"></div>
+      </div>
+      <div style="display:flex;gap:7px;margin-top:9px;">
+        <button onclick="startCam()" id="btnCam" style="flex:1;padding:9px;border-radius:var(--r);border:1px solid var(--b1);background:var(--s2);color:var(--ivory2);font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer;">🎥 Activer la caméra</button>
+        <button onclick="snapAndSearch()" id="btnSnap" disabled style="flex:1;padding:9px;border-radius:var(--r);border:none;background:var(--copper);color:var(--void);font-family:'Inter',sans-serif;font-size:12.5px;font-weight:700;cursor:pointer;opacity:.4;">🔍 Analyser</button>
+      </div>
+    </div>
+
+    <!-- Manual panel -->
+    <div id="panelManual" style="display:none;">
+      <div class="manual-input">
+        <input type="text" id="manualQR" placeholder="WB-DEP-XXXXXX" maxlength="30"
+               oninput="this.value=this.value.toUpperCase()"
+               onkeydown="if(event.key==='Enter')searchManual()">
+        <button onclick="searchManual()" style="padding:9px 16px;border-radius:var(--r);border:none;background:var(--copper);color:var(--void);font-family:'Inter',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">→</button>
+      </div>
+      <div style="font-size:11px;color:var(--dim);margin-top:5px;font-family:'JetBrains Mono',monospace;">
+        Référence WB-DEP-XXXXXX depuis le reçu du citoyen
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loadingBlock" style="display:none;text-align:center;padding:18px;">
+      <span class="spin" style="font-size:22px;color:var(--copper);">⚙</span>
+      <div style="margin-top:7px;font-size:12.5px;color:var(--muted);">Vérification en cours…</div>
+    </div>
+    <!-- Error -->
+    <div id="errorBlock" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- Result -->
+<div id="resultSection" style="display:none;">
+  <div class="result-card">
+    <div class="res-head">
+      <span style="font-size:28px;" id="rIcon">♻</span>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--ivory);" id="rType">—</div>
+        <div style="font-size:12px;color:var(--muted);" id="rCitizen">—</div>
+        <div class="wb-badge">✓ WasteBank vérifié</div>
+      </div>
+    </div>
+    <div class="res-amt">
+      <div class="lbl">MONTANT À VERSER</div>
+      <div class="val" id="rAmount">—</div>
+      <div class="unit">FCFA</div>
+    </div>
+    <div class="res-rows">
+      <div class="res-row"><span class="rrl">POIDS</span><span class="rrv" id="rWeight">—</span></div>
+      <div class="res-row"><span class="rrl">PRIX/KG</span><span class="rrv" id="rPpkg">—</span></div>
+      <div class="res-row"><span class="rrl">RÉFÉRENCE</span><span class="rrv" style="font-family:'JetBrains Mono',monospace;font-size:11px;" id="rRef">—</span></div>
+      <div class="res-row"><span class="rrl">DATE</span><span class="rrv" id="rDate">—</span></div>
+    </div>
+    <div class="action-btns">
+      <button class="btn-validate" id="btnValidate" onclick="doAction('validate')">✓ Valider & Payer</button>
+      <button class="btn-reject"   id="btnReject"   onclick="doAction('reject')">✕ Rejeter</button>
+    </div>
+  </div>
+</div>
+
+<!-- Success -->
+<div id="successSection" style="display:none;">
+  <div class="success-card" id="successCard">
+    <div style="font-size:48px;margin-bottom:10px;" id="sIcon">✅</div>
+    <div style="font-size:22px;font-weight:700;color:var(--ivory);margin-bottom:4px;" id="sTitle">Paiement effectué !</div>
+    <div style="font-size:36px;font-weight:700;color:var(--copperLt);margin-bottom:4px;" id="sAmt">—</div>
+    <div style="font-size:12.5px;color:var(--muted);" id="sSub">—</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-top:10px;" id="sRef">—</div>
+  </div>
+  <button class="btn-new" onclick="resetAll()">◈ Scanner un nouveau dépôt</button>
+</div>
+
+<script>
+const TOKEN = "{{ token }}";
+const POINT_ID = {{ point['id'] }};
+let currentDeposit = null, camStream = null, scanInterval = null;
+
+function switchTab(t){
+  stopCam();
+  document.getElementById('panelCam').style.display    = t==='cam'?'block':'none';
+  document.getElementById('panelManual').style.display = t==='manual'?'block':'none';
+  document.getElementById('tabCam').classList.toggle('active',t==='cam');
+  document.getElementById('tabManual').classList.toggle('active',t==='manual');
+  clearErr();
+}
+
+async function startCam(){
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280}}});
+    camStream = stream;
+    const v = document.getElementById('videoQR');
+    v.srcObject = stream; v.style.display = 'block';
+    document.getElementById('camPh').style.display = 'none';
+    document.getElementById('sweepLine').style.display = 'block';
+    document.getElementById('camZone').classList.add('live');
+    document.getElementById('btnCam').innerHTML = '🟢 Caméra active';
+    document.getElementById('btnCam').style.color = 'var(--jade)';
+    document.getElementById('btnCam').disabled = true;
+    document.getElementById('btnSnap').disabled = false;
+    document.getElementById('btnSnap').style.opacity = '1';
+    // Auto-scan every 2.5s
+    scanInterval = setInterval(() => autoSnap(), 2500);
+  } catch(e){
+    showErr('Caméra non disponible : ' + e.message);
+  }
+}
+
+function stopCam(){
+  if(camStream){camStream.getTracks().forEach(t=>t.stop()); camStream=null;}
+  if(scanInterval){clearInterval(scanInterval); scanInterval=null;}
+}
+
+function snapAndSearch(){
+  const v=document.getElementById('videoQR'), c=document.getElementById('qrCanvas');
+  c.width=v.videoWidth||640; c.height=v.videoHeight||480;
+  c.getContext('2d').drawImage(v,0,0);
+  sendLookup(null, c.toDataURL('image/jpeg',.88));
+}
+
+async function autoSnap(){
+  if(currentDeposit) return;
+  const v=document.getElementById('videoQR');
+  if(!v.videoWidth) return;
+  const c=document.getElementById('qrCanvas');
+  c.width=v.videoWidth; c.height=v.videoHeight;
+  c.getContext('2d').drawImage(v,0,0);
+  await sendLookup(null, c.toDataURL('image/jpeg',.75), true);
+}
+
+function searchManual(){
+  const qr=document.getElementById('manualQR').value.trim();
+  if(!qr){showErr('Entrez un code de référence.'); return;}
+  sendLookup(qr, null);
+}
+
+async function sendLookup(qr, b64, silent=false){
+  if(!silent) showLoading(true);
+  try{
+    const res = await fetch('/agent/lookup',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({qr:qr||'', image_b64:b64||'', token:TOKEN})
+    });
+    const data = await res.json();
+    showLoading(false);
+    if(res.ok && !data.error){
+      showResult(data);
+      if(scanInterval){clearInterval(scanInterval); scanInterval=null;}
+    } else if(!silent){
+      if(data.not_wastebank){
+        showErr('⚠ ' + data.error + ' — Ce code ne provient pas de WasteBank.');
+      } else {
+        showErr(data.error || 'Dépôt introuvable.');
+      }
+    }
+  } catch(e){
+    showLoading(false);
+    if(!silent) showErr('Erreur réseau — vérifiez la connexion.');
+  }
+}
+
+function showResult(dep){
+  currentDeposit = dep;
+  stopCam();
+  document.getElementById('rIcon').textContent    = dep.waste_icon || '♻';
+  document.getElementById('rType').textContent    = dep.waste_name;
+  document.getElementById('rCitizen').textContent = dep.citizen_name + (dep.citizen_phone?' · '+dep.citizen_phone:'');
+  document.getElementById('rAmount').textContent  = parseFloat(dep.total_fcfa).toLocaleString('fr-FR',{maximumFractionDigits:0});
+  document.getElementById('rWeight').textContent  = dep.weight_kg + ' kg';
+  document.getElementById('rPpkg').textContent    = parseFloat(dep.price_per_kg).toLocaleString('fr-FR') + ' FCFA/kg';
+  document.getElementById('rRef').textContent     = dep.qr_code;
+  document.getElementById('rDate').textContent    = dep.created_at;
+  document.getElementById('scanSection').style.display   = 'none';
+  document.getElementById('resultSection').style.display = 'block';
+}
+
+async function doAction(action){
+  if(!currentDeposit) return;
+  const bv=document.getElementById('btnValidate'), br=document.getElementById('btnReject');
+  bv.disabled=true; br.disabled=true;
+  if(action==='reject' && !confirm('Confirmer le rejet de ce dépôt ?')){
+    bv.disabled=false; br.disabled=false; return;
+  }
+  bv.innerHTML = action==='validate'?'<span class="spin">⚙</span> En cours…':'✓';
+  try{
+    const res = await fetch('/agent/validate',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({deposit_id:currentDeposit.deposit_id, token:TOKEN, action})
+    });
+    const data = await res.json();
+    if(res.ok && data.ok){
+      action==='validate' ? showSuccess(data) : showRejected();
+    } else {
+      alert(data.error || 'Erreur serveur.');
+      bv.disabled=false; br.disabled=false;
+      bv.innerHTML='✓ Valider & Payer';
+    }
+  } catch(e){
+    alert('Erreur réseau.');
+    bv.disabled=false; br.disabled=false;
+  }
+}
+
+function showSuccess(data){
+  document.getElementById('resultSection').style.display  = 'none';
+  document.getElementById('successSection').style.display = 'block';
+  document.getElementById('sIcon').textContent  = '✅';
+  document.getElementById('sTitle').textContent = 'Paiement effectué !';
+  document.getElementById('sAmt').textContent   = parseFloat(data.total_fcfa).toLocaleString('fr-FR',{maximumFractionDigits:0})+' FCFA';
+  document.getElementById('sSub').textContent   = 'Versé instantanément · +'+data.points_earned+' pts éco';
+  document.getElementById('sRef').textContent   = 'Réf : '+data.reference;
+  updateStats(data.total_fcfa, currentDeposit.weight_kg);
+}
+
+function showRejected(){
+  document.getElementById('resultSection').style.display  = 'none';
+  document.getElementById('successSection').style.display = 'block';
+  document.getElementById('successCard').style.borderColor = 'var(--ruby)';
+  document.getElementById('sIcon').textContent  = '✕';
+  document.getElementById('sTitle').textContent = 'Dépôt refusé';
+  document.getElementById('sAmt').textContent   = '';
+  document.getElementById('sSub').textContent   = 'Le citoyen a été notifié.';
+  document.getElementById('sRef').textContent   = '';
+}
+
+function updateStats(fcfa, kg){
+  document.getElementById('sCount').textContent = parseInt(document.getElementById('sCount').textContent||0)+1;
+  document.getElementById('sKg').textContent    = (parseFloat(document.getElementById('sKg').textContent||0)+parseFloat(kg)).toFixed(1);
+  const cf = document.getElementById('sFcfa');
+  cf.textContent = (parseFloat(cf.textContent.replace(/\s/g,'')||0)+parseFloat(fcfa)).toLocaleString('fr-FR',{maximumFractionDigits:0});
+}
+
+function showLoading(v){document.getElementById('loadingBlock').style.display=v?'block':'none'; clearErr();}
+function showErr(msg){const b=document.getElementById('errorBlock');b.style.display='block';b.innerHTML=`<div class="err-box"><span>✕</span><span>${msg}</span></div>`;}
+function clearErr(){document.getElementById('errorBlock').style.display='none';}
+function resetAll(){
+  currentDeposit = null;
+  document.getElementById('successCard').style.borderColor = 'var(--jade)';
+  ['resultSection','successSection'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('scanSection').style.display = 'block';
+  document.getElementById('btnValidate').disabled=false; document.getElementById('btnReject').disabled=false;
+  document.getElementById('btnValidate').innerHTML='✓ Valider & Payer';
+  document.getElementById('manualQR').value='';
+  clearErr(); showLoading(false);
+}
+</script>

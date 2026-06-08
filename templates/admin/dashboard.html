@@ -1,153 +1,166 @@
 {% extends "dashboard/layout.html" %}
 {% block title %}Admin — Tableau de bord{% endblock %}
-{% block page_title %}⚙️ Administration{% endblock %}
+{% block page_title %}Vue globale{% endblock %}
+{% block head %}
+<style>
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--ruby);display:inline-block;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.75);}}
+.action-row{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px;animation:fadeIn .4s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+.action-icon{width:28px;height:28px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;}
+</style>
+{% endblock %}
 {% block content %}
 
-<div class="stats-grid">
-  <div class="stat-card green">
-    <div class="stat-label">Citoyens inscrits</div>
-    <div class="stat-value green">{{ stats['citizens'] }}</div>
-    <div class="stat-sub">utilisateurs actifs</div>
-  </div>
-  <div class="stat-card amber">
-    <div class="stat-label">Total collecté</div>
-    <div class="stat-value amber">{{ "%.1f"|format(stats['total_kg'] or 0) }}</div>
-    <div class="stat-sub">kilogrammes</div>
-  </div>
-  <div class="stat-card coral">
-    <div class="stat-label">FCFA distribués</div>
-    <div class="stat-value coral">{{ "%.0f"|format((stats['total_paid'] or 0)/1000) }}K</div>
-    <div class="stat-sub">payés aux citoyens</div>
-  </div>
-  <div class="stat-card purple">
-    <div class="stat-label">En attente</div>
-    <div class="stat-value purple">{{ stats['pending'] }}</div>
-    <div class="stat-sub">dépôts à traiter</div>
-  </div>
+<div class="stats-row">
+  <div class="stat c"><div class="st-lbl">Citoyens</div><div class="st-val">{{ stats['citizens'] }}</div></div>
+  <div class="stat r"><div class="st-lbl">Collecteurs</div><div class="st-val">{{ stats['collectors'] }}</div></div>
+  <div class="stat s"><div class="st-lbl">Kg collectés</div><div class="st-val">{{ "%.1f"|format(stats['total_kg'] or 0) }}</div></div>
+  <div class="stat c"><div class="st-lbl">FCFA distribués</div><div class="st-val">{{ "%.0f"|format((stats['total_paid'] or 0)/1000) }}K</div></div>
+  <div class="stat r"><div class="st-lbl">En attente</div><div class="st-val">{{ stats['pending'] }}</div></div>
 </div>
 
-<div class="grid-2" style="margin-bottom:24px;">
-  <!-- Monthly Chart -->
-  <div class="card">
-    <div class="card-header"><span class="card-title">📈 Activité mensuelle</span></div>
-    <div class="card-body"><canvas id="adminChart" height="200"></canvas></div>
-  </div>
+<div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+  <a href="{{ url_for('admin.create_collector') }}" class="btn btn-copper">+ Créer collecteur</a>
+  <a href="{{ url_for('admin.users') }}" class="btn btn-ghost">Utilisateurs</a>
+  <a href="{{ url_for('admin.waste_types') }}" class="btn btn-ghost">Prix</a>
+  <a href="{{ url_for('admin.collection_points') }}" class="btn btn-ghost">Points</a>
+  <a href="{{ url_for('admin.deposits') }}" class="btn btn-ghost">Dépôts</a>
+</div>
 
-  <!-- Waste breakdown -->
+<div class="g2" style="margin-bottom:18px;">
   <div class="card">
-    <div class="card-header"><span class="card-title">♻️ Répartition par type</span></div>
-    <div class="card-body" style="padding:12px 0;">
-      {% for wt in waste_breakdown %}
-      <div style="padding:8px 20px;">
-        <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
-          <span>{{ wt['icon'] }} {{ wt['name'] }}</span>
-          <span class="mono" style="font-size:12px;color:var(--muted);">{{ "%.1f"|format(wt['total_kg'] or 0) }} kg</span>
-        </div>
-        {% set max_kg = waste_breakdown[0]['total_kg'] or 1 %}
-        <div class="progress-bar">
-          <div class="progress-fill" style="width:{{ [(wt['total_kg'] or 0) / max_kg * 100, 100]|min }}%;background:#{{ wt['color_hex'] }};"></div>
-        </div>
+    <div class="card-head">
+      <span class="card-title">Activité collecteurs</span>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span class="live-dot"></span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ruby);">TEMPS REEL</span>
       </div>
+    </div>
+    <div style="padding:0 16px;max-height:340px;overflow-y:auto;" id="liveFeed">
+      {% for a in live %}
+      <div class="action-row">
+        <div class="action-icon" style="background:{% if 'validat' in a['action'] %}rgba(42,122,90,.15){% elif 'reject' in a['action'] %}rgba(184,50,86,.15){% else %}rgba(200,121,65,.15){% endif %};">
+          {% if 'validat' in a['action'] %}✓{% elif 'reject' in a['action'] %}✕{% else %}+{% endif %}
+        </div>
+        <div style="flex:1;">
+          <div style="font-weight:600;color:var(--ivory2);">{{ a['collector_name'] }}</div>
+          <div style="color:var(--muted);">
+            {% if 'validat' in a['action'] %}Validé {{ "%.1f"|format(a['weight_kg']) }}kg — <span class="c-copper mono" style="font-size:11px;">{{ "%.0f"|format(a['amount_fcfa']) }} FCFA</span>
+            {% elif 'reject' in a['action'] %}Dépôt rejeté
+            {% else %}{{ a['action'] }}{% endif %}
+            {% if a['point_name'] %} · {{ a['point_name'] }}{% endif %}
+          </div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);white-space:nowrap;">{{ a['created_at'][:16] }}</div>
+      </div>{% else %}
+      <div style="padding:24px;text-align:center;color:var(--dim);font-size:12px;">Aucune activité</div>
       {% endfor %}
     </div>
   </div>
-</div>
 
-<div class="grid-2" style="margin-bottom:24px;">
-  <!-- Top users -->
   <div class="card">
-    <div class="card-header">
-      <span class="card-title">🏆 Top citoyens</span>
-      <a href="{{ url_for('admin.users') }}" style="font-size:12px;color:var(--muted);">Voir tous →</a>
+    <div class="card-head">
+      <span class="card-title">Collecteurs</span>
+      <a href="{{ url_for('admin.create_collector') }}" class="btn btn-copper btn-sm">+ Nouveau</a>
     </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>#</th><th>Citoyen</th><th>Dépôts</th><th>Kg</th><th>Gagné</th></tr></thead>
-        <tbody>
-          {% for u in top_users %}
-          <tr>
-            <td style="font-weight:800;">
-              {% if loop.index == 1 %}🥇{% elif loop.index == 2 %}🥈{% elif loop.index == 3 %}🥉{% else %}{{ loop.index }}{% endif %}
-            </td>
-            <td><div style="font-weight:700;">{{ u['name'] }}</div><div style="font-size:11px;color:var(--muted);">{{ u['city'] }}</div></td>
-            <td class="mono">{{ u['deposits'] }}</td>
-            <td class="mono">{{ "%.1f"|format(u['kg'] or 0) }}</td>
-            <td class="mono text-green">{{ "%.0f"|format(u['earned'] or 0) }} ₣</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Recent deposits -->
-  <div class="card">
-    <div class="card-header">
-      <span class="card-title">📋 Dépôts récents</span>
-      <a href="{{ url_for('admin.deposits') }}" style="font-size:12px;color:var(--muted);">Voir tous →</a>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>Citoyen</th><th>Type</th><th>Montant</th><th>Statut</th></tr></thead>
-        <tbody>
-          {% for d in recent_deposits[:8] %}
-          <tr>
-            <td style="font-size:12px;">{{ d['user_name'] }}</td>
-            <td><span class="waste-dot"><span class="dot" style="background:#{{ d['color_hex'] }}"></span>{{ d['waste_name'] }}</span></td>
-            <td class="mono text-amber" style="font-size:12px;">{{ "%.0f"|format(d['total_fcfa']) }} ₣</td>
-            <td>
-              {% if d['status']=='paid' %}<span class="badge badge-green">Payé</span>
-              {% elif d['status']=='pending' %}<span class="badge badge-amber">Attente</span>
-              {% else %}<span class="badge badge-coral">{{ d['status'] }}</span>{% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div>{% for c in collectors %}
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);">
+        <div class="av sp" style="width:28px;height:28px;font-size:10px;">{{ c['name'][:2].upper() }}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:var(--ivory2);">{{ c['name'] }}</div>
+          <div style="font-size:11px;color:var(--muted);">📍 {{ c['point_name'] or 'Non assigné' }}</div>
+        </div>
+        <div style="text-align:right;">
+          <span class="badge {% if c['active'] %}b-green{% else %}b-ruby{% endif %}">{% if c['active'] %}Actif{% else %}Bloqué{% endif %}</span>
+          <div style="font-size:10px;color:var(--dim);margin-top:2px;">{{ c['today_validated'] or 0 }} validés auj.</div>
+        </div>
+      </div>{% else %}
+      <div style="padding:24px;text-align:center;color:var(--dim);font-size:12px;">
+        Aucun collecteur — <a href="{{ url_for('admin.create_collector') }}" class="c-copper">Créer →</a>
+      </div>{% endfor %}
     </div>
   </div>
 </div>
 
-<!-- Quick links -->
-<div class="grid-4">
-  {% for icon, label, url in [
-    ('👥','Gérer utilisateurs', url_for('admin.users')),
-    ('♻️','Types de déchets',   url_for('admin.waste_types')),
-    ('📍','Points de collecte', url_for('admin.collection_points')),
-    ('📊','Rapports RSE',       url_for('admin.rse'))
-  ] %}
-  <a href="{{ url }}" class="card" style="padding:20px;text-align:center;text-decoration:none;transition:border-color .2s;" onmouseover="this.style.borderColor='var(--green)'" onmouseout="this.style.borderColor='var(--border)'">
-    <div style="font-size:28px;margin-bottom:8px;">{{ icon }}</div>
-    <div style="font-size:13px;font-weight:700;color:var(--text);">{{ label }}</div>
-  </a>
-  {% endfor %}
+<div class="g2" style="margin-bottom:18px;">
+  <div class="card">
+    <div class="card-head"><span class="card-title">Activité mensuelle</span></div>
+    <div class="card-body"><canvas id="aC" height="200"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><span class="card-title">Par type de déchet</span></div>
+    <div style="padding:8px 0;">{% for wt in waste_bk %}
+      <div style="padding:6px 16px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+          <span style="font-size:12px;">{{ wt['name'] }}</span>
+          <span class="mono" style="font-size:11px;color:var(--muted);">{{ "%.1f"|format(wt['total_kg'] or 0) }} kg</span>
+        </div>
+        <div class="prog"><div class="prog-fill" style="width:{{ [(wt['total_kg'] or 0)/(waste_bk[0]['total_kg'] or 1)*100,100]|min }}%;background:#{{ wt['color_hex'] }};"></div></div>
+      </div>{% endfor %}
+    </div>
+  </div>
 </div>
 
+<div class="g2">
+  <div class="card">
+    <div class="card-head"><span class="card-title">Dépôts récents</span><a href="{{ url_for('admin.deposits') }}" style="font-size:11px;color:var(--muted);">Voir tout →</a></div>
+    <div class="tbl"><table>
+      <thead><tr><th>Citoyen</th><th>Type</th><th>Montant</th><th>Statut</th></tr></thead>
+      <tbody>{% for d in recent[:8] %}
+        <tr>
+          <td style="font-size:12px;font-weight:600;">{{ d['user_name'] }}</td>
+          <td><span style="display:flex;align-items:center;gap:5px;"><span style="width:7px;height:7px;border-radius:50%;background:#{{ d['color_hex'] }};flex-shrink:0;"></span>{{ d['waste_name'] }}</span></td>
+          <td class="mono c-copper" style="font-size:11.5px;font-weight:600;">{{ "%.0f"|format(d['total_fcfa']) }} ₣</td>
+          <td>{% if d['status']=='paid' %}<span class="badge b-green">Payé</span>{% elif d['status']=='pending' %}<span class="badge b-copper">Attente</span>{% else %}<span class="badge b-ruby">{{ d['status'] }}</span>{% endif %}</td>
+        </tr>{% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><span class="card-title">Top citoyens</span></div>
+    <div class="tbl"><table>
+      <thead><tr><th>#</th><th>Nom</th><th>Kg</th><th>Gagné</th></tr></thead>
+      <tbody>{% for u in top_users %}
+        <tr>
+          <td style="font-weight:800;color:{% if loop.index==1 %}var(--copper){% else %}var(--dim){% endif %};">{{ loop.index }}</td>
+          <td style="font-size:12px;font-weight:600;">{{ u['name'] }}<br><span style="color:var(--dim);font-size:10px;">{{ u['city'] }}</span></td>
+          <td class="mono" style="font-size:11.5px;">{{ "%.1f"|format(u['kg'] or 0) }}</td>
+          <td class="mono c-copper" style="font-size:11.5px;font-weight:600;">{{ "%.0f"|format(u['earned'] or 0) }} ₣</td>
+        </tr>{% endfor %}
+      </tbody>
+    </table></div>
+  </div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-const months = {{ monthly|map(attribute='month')|list|tojson }};
-const counts = {{ monthly|map(attribute='count')|list|tojson }};
-const kgs    = {{ monthly|map(attribute='kg')|list|tojson }};
-new Chart(document.getElementById('adminChart'), {
-  type: 'line',
-  data: {
-    labels: months,
-    datasets: [
-      { label:'Dépôts', data: counts, borderColor:'#1D9E75', backgroundColor:'rgba(29,158,117,.1)', tension:.4, fill:true, yAxisID:'y' },
-      { label:'Kg', data: kgs, borderColor:'#EF9F27', backgroundColor:'rgba(239,159,39,.05)', tension:.4, fill:true, yAxisID:'y1' },
-    ]
-  },
-  options: {
-    responsive:true,
-    plugins:{ legend:{ labels:{ color:'#888780', font:{ family:'Space Mono', size:10 } } } },
-    scales: {
-      x:  { ticks:{ color:'#888780' }, grid:{ color:'#2A2A28' } },
-      y:  { ticks:{ color:'#1D9E75' }, grid:{ color:'#2A2A28' }, position:'left' },
-      y1: { ticks:{ color:'#EF9F27' }, grid:{ display:false },  position:'right' },
-    }
-  }
-});
+const M={{ monthly|map(attribute='month')|list|tojson }};
+const K={{ monthly|map(attribute='kg')|list|tojson }};
+const F={{ monthly|map(attribute='fcfa')|list|tojson }};
+new Chart(document.getElementById('aC'),{type:'line',data:{labels:M,datasets:[
+  {label:'Kg',data:K,borderColor:'#C87941',backgroundColor:'rgba(200,121,65,.1)',tension:.4,fill:true,yAxisID:'y'},
+  {label:'FCFA',data:F,borderColor:'#B83256',backgroundColor:'rgba(184,50,86,.05)',tension:.4,fill:true,yAxisID:'y1'}
+]},options:{responsive:true,plugins:{legend:{labels:{color:'#7A7880',font:{family:'JetBrains Mono',size:9}}}},
+  scales:{x:{ticks:{color:'#4A4855',font:{size:9}},grid:{color:'rgba(42,42,54,.4)'}},
+          y:{ticks:{color:'#C87941'},grid:{color:'rgba(42,42,54,.4)'},position:'left'},
+          y1:{ticks:{color:'#B83256'},grid:{display:false},position:'right'}}}});
+
+const feed=document.getElementById('liveFeed');
+if(window.EventSource){
+  const es=new EventSource("{{ url_for('admin.live_feed') }}");
+  es.onmessage=function(e){
+    const d=JSON.parse(e.data);
+    const iv=d.action.includes('validat'),ir=d.action.includes('reject');
+    const div=document.createElement('div'); div.className='action-row';
+    div.innerHTML=`<div class="action-icon" style="background:${iv?'rgba(42,122,90,.15)':ir?'rgba(184,50,86,.15)':'rgba(200,121,65,.15)'};">${iv?'✓':ir?'✕':'+'}</div>
+    <div style="flex:1;"><div style="font-weight:600;color:var(--ivory2);">${d.collector}</div>
+    <div style="color:var(--muted);">${iv?`Validé ${parseFloat(d.weight||0).toFixed(1)}kg — <span style="color:var(--copper-lt);font-family:'JetBrains Mono',monospace;">${parseFloat(d.amount||0).toLocaleString('fr-FR')} FCFA</span>`:ir?'Dépôt rejeté':d.action}${d.point?' · '+d.point:''}</div></div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);white-space:nowrap;">${d.time}</div>`;
+    feed.prepend(div);
+    if(feed.children.length>30) feed.removeChild(feed.lastChild);
+  };
+}
 </script>
 {% endblock %}

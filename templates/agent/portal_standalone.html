@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Agent WasteBank — {{ point['name'] }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+{% include "agent/_portal_styles.html" %}
+</head>
+<body style="background:#0C0C0E;color:#F0EDE6;min-height:100vh;">
+<div style="background:#080809;border-bottom:1px solid #2A2A36;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;">
+  <div style="display:flex;align-items:center;gap:8px;">
+    <div style="width:30px;height:30px;background:linear-gradient(135deg,#8A5228,#C87941);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:15px;">♻</div>
+    <div>
+      <div style="font-size:17px;font-weight:700;color:#F0EDE6;">WasteBank</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:8px;color:#4A4855;letter-spacing:2px;">PORTAIL AGENT</div>
+    </div>
+  </div>
+  <div style="text-align:right;">
+    <div style="font-size:12px;font-weight:600;color:#F0EDE6;">{{ point['name'] }}</div>
+    <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#4A4855;">{{ point['city'] }}</div>
+  </div>
+</div>
+<div style="max-width:480px;margin:0 auto;padding:16px;">
+  {% include "agent/_portal_body.html" %}
+</div>
+</body>
+</html>

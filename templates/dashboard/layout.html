@@ -12,6 +12,53 @@
       </div>
     </div>
     <nav class="sb-nav">
+
+      {% if current_user and current_user['role'] == 'collector' %}
+      {# ── MENU COLLECTEUR UNIQUEMENT ── #}
+      <div class="sb-sect">Mon espace</div>
+      <a href="{{ url_for('dash.collector') }}" class="nav-item {% if request.endpoint=='dash.collector' %}active{% endif %}">
+        <span class="nav-ico">⊞</span>Mon tableau de bord
+      </a>
+      <a href="{{ url_for('agent.agent_direct') }}" class="nav-item {% if 'agent' in (request.endpoint or '') %}active{% endif %}">
+        <span class="nav-ico">⬡</span>Scanner QR — Valider
+      </a>
+      <div class="sb-sect">Infos</div>
+      <a href="{{ url_for('public.index') }}" class="nav-item"><span class="nav-ico">◌</span>Site public</a>
+
+      {% elif current_user and current_user['role'] == 'admin' %}
+      {# ── MENU ADMIN ── #}
+      <div class="sb-sect">Principal</div>
+      <a href="{{ url_for('admin.dashboard') }}" class="nav-item {% if request.endpoint=='admin.dashboard' %}active{% endif %}">
+        <span class="nav-ico">⊞</span>Vue globale
+      </a>
+      <div class="sb-sect">Administration</div>
+      <a href="{{ url_for('admin.users') }}" class="nav-item {% if request.endpoint=='admin.users' %}active{% endif %}">
+        <span class="nav-ico">◈</span>Utilisateurs
+      </a>
+      <a href="{{ url_for('admin.create_collector') }}" class="nav-item {% if request.endpoint=='admin.create_collector' %}active{% endif %}">
+        <span class="nav-ico">+</span>Créer collecteur
+      </a>
+      <a href="{{ url_for('admin.waste_types') }}" class="nav-item {% if request.endpoint=='admin.waste_types' %}active{% endif %}">
+        <span class="nav-ico">◇</span>Types & Prix
+      </a>
+      <a href="{{ url_for('admin.collection_points') }}" class="nav-item {% if request.endpoint=='admin.collection_points' %}active{% endif %}">
+        <span class="nav-ico">◎</span>Points collecte
+      </a>
+      <a href="{{ url_for('admin.deposits') }}" class="nav-item {% if request.endpoint=='admin.deposits' %}active{% endif %}">
+        <span class="nav-ico">▦</span>Tous dépôts
+      </a>
+      <a href="{{ url_for('admin.rse') }}" class="nav-item {% if request.endpoint=='admin.rse' %}active{% endif %}">
+        <span class="nav-ico">◈</span>Rapports RSE
+      </a>
+      <a href="{{ url_for('agent.scan_page') }}" class="nav-item {% if request.endpoint=='agent.scan_page' %}active{% endif %}">
+        <span class="nav-ico">⬡</span>Portails Agent
+      </a>
+      <div class="sb-sect">Infos</div>
+      <a href="{{ url_for('public.prices') }}" class="nav-item"><span class="nav-ico">◐</span>Prix du jour</a>
+      <a href="{{ url_for('public.points_map') }}" class="nav-item"><span class="nav-ico">◌</span>Points collecte</a>
+
+      {% else %}
+      {# ── MENU CITOYEN ── #}
       <div class="sb-sect">Principal</div>
       <a href="{{ url_for('dash.home') }}" class="nav-item {% if request.endpoint=='dash.home' %}active{% endif %}">
         <span class="nav-ico">⊞</span>Tableau de bord
@@ -25,42 +72,11 @@
       <a href="{{ url_for('dash.profile') }}" class="nav-item {% if request.endpoint=='dash.profile' %}active{% endif %}">
         <span class="nav-ico">◉</span>Mon profil
       </a>
-
-      {% if current_user and current_user['role'] in ('collector','admin') %}
-      <div class="sb-sect">Collecteur</div>
-      <a href="{{ url_for('dash.collector') }}" class="nav-item {% if request.endpoint=='dash.collector' %}active{% endif %}">
-        <span class="nav-ico">✦</span>Valider dépôts
-      </a>
-      <a href="{{ url_for('agent.scan_page') }}" class="nav-item {% if 'agent' in (request.endpoint or '') %}active{% endif %}">
-        <span class="nav-ico">⬡</span>Portails Agent QR
-      </a>
-      {% endif %}
-
-      {% if current_user and current_user['role']=='admin' %}
-      <div class="sb-sect">Administration</div>
-      <a href="{{ url_for('admin.dashboard') }}" class="nav-item {% if request.endpoint=='admin.dashboard' %}active{% endif %}">
-        <span class="nav-ico">◆</span>Vue globale
-      </a>
-      <a href="{{ url_for('admin.users') }}" class="nav-item {% if request.endpoint=='admin.users' %}active{% endif %}">
-        <span class="nav-ico">◈</span>Utilisateurs
-      </a>
-      <a href="{{ url_for('admin.waste_types') }}" class="nav-item">
-        <span class="nav-ico">◇</span>Types & Prix
-      </a>
-      <a href="{{ url_for('admin.collection_points') }}" class="nav-item">
-        <span class="nav-ico">◎</span>Points collecte
-      </a>
-      <a href="{{ url_for('admin.deposits') }}" class="nav-item">
-        <span class="nav-ico">▦</span>Tous dépôts
-      </a>
-      <a href="{{ url_for('admin.rse') }}" class="nav-item">
-        <span class="nav-ico">◈</span>Rapports RSE
-      </a>
-      {% endif %}
-
       <div class="sb-sect">Infos</div>
-      <a href="{{ url_for('public.prices') }}"     class="nav-item"><span class="nav-ico">◐</span>Prix du jour</a>
+      <a href="{{ url_for('public.prices') }}" class="nav-item"><span class="nav-ico">◐</span>Prix du jour</a>
       <a href="{{ url_for('public.points_map') }}" class="nav-item"><span class="nav-ico">◌</span>Points collecte</a>
+      {% endif %}
+
     </nav>
     <div class="sb-footer">
       {% if current_user %}
@@ -85,7 +101,9 @@
         <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
       </div>
       <div class="topbar-r">
+        {% if current_user and current_user['role'] != 'collector' %}
         <button class="ico-btn ping" id="nBtn" onclick="markR()" title="Notifications">🔔</button>
+        {% endif %}
         <a href="{{ url_for('public.index') }}" class="btn btn-dim btn-sm">↗ Site</a>
       </div>
     </header>
@@ -93,7 +111,7 @@
   </div>
 </div>
 <script>
-function markR(){fetch("{{ url_for('dash.mark_read') }}",{method:'POST'}).then(()=>document.getElementById('nBtn').classList.remove('ping'));}
+function markR(){fetch("{{ url_for('dash.mark_read') }}",{method:'POST'}).then(()=>document.getElementById('nBtn')?.classList.remove('ping'));}
 if(window.innerWidth<=768)document.getElementById('mbtn').style.display='flex';
 </script>
 {% block scripts %}{% endblock %}
